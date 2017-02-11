@@ -130,6 +130,23 @@ void VulkanApp::CheckExtensionsSupport() {
 	}
 }
 
+bool VulkanApp::CheckDeviceExtensionSupport(VkPhysicalDevice device) {
+	uint32_t extensionCount;
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr,
+		&extensionCount, availableExtensions.data());
+
+	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+	for (const auto& extension : availableExtensions) {
+		requiredExtensions.erase(extension.extensionName);
+	}
+
+	return requiredExtensions.empty();
+}
+
 void VulkanApp::SetupDebugCallback() {
 	if (!enableValidationLayers) return;
 
@@ -191,7 +208,9 @@ void VulkanApp::PickPhysicalDevice() {
 
 bool VulkanApp::_isDeviceSuitable(VkPhysicalDevice device) {
 	QueueFamilyIndices indices = _findQueueFamilies(device);
-	return indices.isComplete();
+	bool extensionsSupported = CheckDeviceExtensionSupport(device);
+
+	return indices.isComplete() && extensionsSupported;
 }
 
 QueueFamilyIndices VulkanApp::_findQueueFamilies(VkPhysicalDevice device) {

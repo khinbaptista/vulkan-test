@@ -19,6 +19,10 @@ const std::vector<const char*> validationLayers = {
 	"VK_LAYER_LUNARG_standard_validation"
 };
 
+const std::vector<const char*> deviceExtensions = {
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
 struct QueueFamilyIndices {
 	int graphicsFamily = -1;
 	int presentFamily = -1;
@@ -50,6 +54,7 @@ private:
 	void CreateSurface();
 	bool CheckValidationLayerSupport();
 	void CheckExtensionsSupport();
+	bool CheckDeviceExtensionSupport(VkPhysicalDevice);
 	void SetupDebugCallback();
 
 	std::vector<const char*> GetRequiredExtensions();
