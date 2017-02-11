@@ -1,4 +1,4 @@
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 #include <functional>
 
 VkResult CreateDebugReportCallbackEXT(
@@ -18,6 +18,7 @@ template <typename T>
 class VDeleter {
 public:
 	VDeleter() : VDeleter([](T, VkAllocationCallbacks*) {}) {}
+	//VDeleter() : VDeleter([](T, vk::AllocationCallbacks*) {}) {}
 
 	VDeleter(std::function<void(T, VkAllocationCallbacks*)> deletef) {
 		this->deleter = [=](T obj) { deletef(obj, nullptr); };

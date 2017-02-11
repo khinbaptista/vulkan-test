@@ -3,6 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <functional>
 #include "vdeleter.hpp"
 
 const int WIDTH = 800;
@@ -18,6 +19,12 @@ const std::vector<const char*> validationLayers = {
 	"VK_LAYER_LUNARG_standard_validation"
 };
 
+struct QueueFamilyIndices {
+	int graphicsFamily = -1;
+	int presentFamily = -1;
+	bool isComplete();
+};
+
 class VulkanApp {
 public:
 	void Run();
@@ -25,16 +32,22 @@ public:
 private:
 	GLFWwindow* window;
 	VDeleter<VkInstance> instance { vkDestroyInstance };
+	//VDeleter<vk::Instance> instance { &vk::Instance::destroy };
 
 	VDeleter<VkDebugReportCallbackEXT> callback {
 		instance, DestroyDebugReportCallbackEXT
 	};
 
+	VDeleter<VkDevice> device { vkDestroyDevice };
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	VDeleter<VkSurfaceKHR> surface { instance, vkDestroySurfaceKHR };
+	VkQueue graphicsQueue;
+	VkQueue presentQueue;
 
 	void InitWindow();
 	void InitVulkan();
 	void CreateInstance();
+	void CreateSurface();
 	bool CheckValidationLayerSupport();
 	void CheckExtensionsSupport();
 	void SetupDebugCallback();
@@ -43,6 +56,8 @@ private:
 
 	void PickPhysicalDevice();
 	bool _isDeviceSuitable(VkPhysicalDevice);
+	QueueFamilyIndices _findQueueFamilies(VkPhysicalDevice);
+	void CreateLogicalDevice();
 
 	void MainLoop();
 
