@@ -21,6 +21,7 @@ public:
 	//VDeleter() : VDeleter([](T, vk::AllocationCallbacks*) {}) {}
 
 	VDeleter(std::function<void(T, VkAllocationCallbacks*)> deletef) {
+	//VDeleter(std::function<void(T, vk::AllocationCallbacks*)> deletef) {
 		this->deleter = [=](T obj) { deletef(obj, nullptr); };
 	}
 
