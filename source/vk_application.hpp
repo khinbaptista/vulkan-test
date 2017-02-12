@@ -29,6 +29,12 @@ struct QueueFamilyIndices {
 	bool isComplete();
 };
 
+struct SwapChainSupportDetails {
+	VkSurfaceCapabilitiesKHR capabilities;
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> presentModes;
+};
+
 class VulkanApp {
 public:
 	void Run();
@@ -42,9 +48,16 @@ private:
 		instance, DestroyDebugReportCallbackEXT
 	};
 
-	VDeleter<VkDevice> device { vkDestroyDevice };
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+
+	VDeleter<VkDevice> device { vkDestroyDevice };
 	VDeleter<VkSurfaceKHR> surface { instance, vkDestroySurfaceKHR };
+	VDeleter<VkSwapchainKHR> swapChain{ device, vkDestroySwapchainKHR };
+
+	std::vector<VkImage> swapChainImages;
+	VkFormat swapChainImageFormat;
+	VkExtent2D swapChainExtent;
+
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
 
@@ -56,13 +69,19 @@ private:
 	void CheckExtensionsSupport();
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice);
 	void SetupDebugCallback();
+	void CreateLogicalDevice();
+	void CreateSwapChain();
 
 	std::vector<const char*> GetRequiredExtensions();
 
 	void PickPhysicalDevice();
 	bool _isDeviceSuitable(VkPhysicalDevice);
 	QueueFamilyIndices _findQueueFamilies(VkPhysicalDevice);
-	void CreateLogicalDevice();
+	SwapChainSupportDetails _querySwapChainSupport(VkPhysicalDevice);
+
+	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>&);
+	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>&);
+	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR&);
 
 	void MainLoop();
 

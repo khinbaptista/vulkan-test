@@ -42,6 +42,10 @@ object_dir:
 test: $(Project)
 	./$(Project)
 
+remake: clean all
+
+build: remake test
+
 $(Project): $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
