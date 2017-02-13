@@ -455,7 +455,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanApp::debugCallback(
 // #############################################################################
 
 VkResult CreateDebugReportCallbackEXT(
-	VkInstance instance,
+	VkInstance instance,CreateDebugReportCallbackEXT
 	const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
 	const VkAllocationCallbacks* pAllocator,
 	VkDebugReportCallbackEXT* pCallback

@@ -17,7 +17,8 @@ LDFLAGS	= -lvulkan -L$(VULKAN_SDK)/lib
 SourcePath	= source
 ObjectsPath	= source/objects
 
-SourceFiles	= main.cpp vk_application.cpp
+SourceFiles	= main.cpp vk_app.cpp
+#lication.cpp
 
 Packages	= glfw3
 
