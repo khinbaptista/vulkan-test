@@ -3,11 +3,13 @@
 #include <iostream>
 #include <stdexcept>
 #include <functional>
+#include <algorithm>
 #include <vector>
 #include <set>
 
 using std::string;
 using std::vector;
+using std::set;
 using std::cout;
 using std::endl;
 
@@ -16,13 +18,14 @@ VkApp::VkApp(string t, int w, int h, bool enable_validation) {
 	width	= w;
 	height	= h;
 
+	deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	validationLayers.push_back("VK_LAYER_LUNARG_standard_validation");
 
-#ifdef NDEBUG
+	#ifdef NDEBUG
 	validation_enabled = enable_validation;
-#else
+	#else
 	validation_enabled = true;
-#endif
+	#endif
 }
 
 void VkApp::Run() {
@@ -30,6 +33,7 @@ void VkApp::Run() {
 	InitVulkan();
 
 	MainLoop();
+
 	Cleanup();
 }
 
@@ -49,13 +53,15 @@ void VkApp::MainLoop() {
 }
 
 void VkApp::Cleanup() {
-	glfwDestroyWindow(window);
-
 	auto func = (PFN_vkDestroyDebugReportCallbackEXT)
 		instance.getProcAddr("vkDestroyDebugReportCallbackEXT");
 	if (func != nullptr) { func(instance, callback, nullptr); }
 
+	instance.destroySurfaceKHR(surface, nullptr);
+	device.destroy();
 	instance.destroy();
+
+	glfwDestroyWindow(window);
 }
 
 // #############################################################################
@@ -64,6 +70,10 @@ void VkApp::Cleanup() {
 void VkApp::InitVulkan() {
 	CreateInstance();
 	SetupDebugCallback();
+	CreateSurface();
+	PickPhysicalDevice();
+	CreateLogicalDevice();
+	CreateSwapChain();
 }
 
 void VkApp::CreateInstance() {
@@ -208,4 +218,222 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VkApp::DebugCallback(
 ) {
 	std::cerr << "Validation layer: " << msg << std::endl;
 	return VK_FALSE;
+}
+
+void VkApp::CreateSurface() {
+	instance.destroySurfaceKHR(surface, nullptr);
+	VkSurfaceKHR s = (VkSurfaceKHR) surface;
+	VkResult r = glfwCreateWindowSurface(instance, window, nullptr, &s);
+
+	if (r != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create window surface");
+	}
+
+	surface = s;
+}
+
+void VkApp::PickPhysicalDevice() {
+	vector<vk::PhysicalDevice> devices;
+	devices = instance.enumeratePhysicalDevices();
+
+	if (devices.size() == 0) {
+		throw std::runtime_error("Failed to find GPUs with Vulkan support");
+	}
+
+	for (const auto& device : devices) {
+		if (isDeviceSuitable(device)) {
+			physical_device = device;
+		}
+	}
+
+	if (!physical_device) {
+		throw std::runtime_error("Failed to find a suitable GPU");
+	}
+}
+
+bool VkApp::isDeviceSuitable(vk::PhysicalDevice device) {
+	QueueFamilyIndices indices = FindQueueFamilies(device);
+	bool extensions_supported = CheckDeviceExtensionSupport(device);
+
+	bool swapchain_adequate = false;
+	if (extensions_supported) {
+		SwapChainSupportDetails swapchain_support =
+			QuerySwapChainSupport(device);
+
+		swapchain_adequate = !swapchain_support.formats.empty() and
+			!swapchain_support.present_modes.empty();
+	}
+
+	return indices.isComplete() and extensions_supported and swapchain_adequate;
+}
+
+bool QueueFamilyIndices::isComplete() {
+	return graphics_family >= 0 and presentation_family >= 0;
+}
+
+QueueFamilyIndices VkApp::FindQueueFamilies(vk::PhysicalDevice device) {
+	QueueFamilyIndices indices;
+
+	vector<vk::QueueFamilyProperties> queue_families;
+	queue_families = device.getQueueFamilyProperties();
+
+	int i = 0;
+	for (const auto& queue_family : queue_families) {
+		if (queue_family.queueCount > 0 && queue_family.queueFlags & vk::QueueFlagBits::eGraphics) {
+			indices.graphics_family = i;
+		}
+
+		VkBool32 presentation_support = false;
+		device.getSurfaceSupportKHR(i, surface, &presentation_support);
+		if (queue_family.queueCount > 0  && presentation_support) {
+			indices.presentation_family = i;
+		}
+
+		if (indices.isComplete()) break;
+		i++;
+	}
+
+	return indices;
+}
+
+void VkApp::CreateLogicalDevice() {
+	QueueFamilyIndices indices = FindQueueFamilies(physical_device);
+
+	vector<vk::DeviceQueueCreateInfo> queue_infos;
+	set<int> unique_queue_families = {
+		indices.graphics_family, indices.presentation_family
+	};
+
+	float queue_priority = 1.0f;
+	for (int queue_family : unique_queue_families) {
+		vk::DeviceQueueCreateInfo queue_info;
+		queue_info.queueFamilyIndex = queue_family;
+		queue_info.queueCount = 1;
+		queue_info.pQueuePriorities = &queue_priority;
+
+		queue_infos.push_back(queue_info);
+	}
+
+	vk::PhysicalDeviceFeatures device_features;
+
+	vk::DeviceCreateInfo device_info;
+	device_info.queueCreateInfoCount = (uint32_t) queue_infos.size();
+	device_info.pQueueCreateInfos = queue_infos.data();
+	device_info.pEnabledFeatures = &device_features;
+	device_info.enabledExtensionCount = deviceExtensions.size();
+	device_info.ppEnabledExtensionNames = deviceExtensions.data();
+	if (validation_enabled) {
+		device_info.enabledLayerCount = validationLayers.size();
+		device_info.ppEnabledLayerNames = validationLayers.data();
+	}
+
+	vk::Result r = physical_device.createDevice(&device_info, nullptr, &device);
+	if (r != vk::Result::eSuccess) {
+		throw std::runtime_error("Failed to create logical device");
+	}
+
+	graphics_queue = device.getQueue(indices.graphics_family, 0);
+	presentation_queue = device.getQueue(indices.presentation_family, 0);
+}
+
+bool VkApp::CheckDeviceExtensionSupport(vk::PhysicalDevice device) {
+	vector<vk::ExtensionProperties> available_extensions
+		= device.enumerateDeviceExtensionProperties();
+
+	set<string> required_extensions(
+		deviceExtensions.begin(), deviceExtensions.end()
+	);
+
+	for (const auto& extesion : available_extensions) {
+		required_extensions.erase(extension.extensionName);
+	}
+
+	return required_extensions.empty();
+}
+
+SwapChainSupportDetails VkApp::QuerySwapchainSupport(vk::PhysicalDevice device) {
+	SwapChainSupportDetails details;
+
+	details.capabilities	= device.getSurfaceCapabilitiesKHR(surface);
+	details.formats		= device.getSurfaceFormatsKHR(surface);
+	details.present_modes	= device.getSurfacePresentModesKHR(surface);
+
+	return details;
+}
+
+vk::SurfaceFormatKHR VkApp::ChooseSwapSurfaceFormat(
+	const vector<vk::SurfaceFormatKHR>& available_formats
+) {
+	if (
+		available_formats.size() == 1 and
+		available_formats[0].format == vk::Format::eUndefined
+	) {
+		return { vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
+	}
+
+	for (const auto& format : available_formats) {
+		if (
+			format.format == vk::Format::eB8G8R8A8Unorm and
+			format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear
+		) {
+			return format;
+		}
+	}
+
+	return available_formats[0];
+}
+
+vk::PresentModeKHR VkApp::ChooseSwapPresentMode(
+	const vector<vk::PresentModeKHR>& available_present_modes
+) {
+	for (const auto& mode : available_present_modes) {
+		if (mode == vk::PresentModeKHR::eMailbox) {
+			return mode;
+		}
+	}
+
+	return vk::PresentModeKHR::eFifo;
+}
+
+vk::Extent2D VkApp::ChooseSwapExtent(
+	const vector<vk::SurfaceCapabilitiesKHR>& capabilities
+) {
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+		capabilities.currentExtent;
+	}
+
+	vk::Extent2D extent = { width, height };
+	extent.width = std::max(capabilities.minImageExtent.width,
+		std::min(capabilities.maxImageExtent.width, extent.width));
+	extent.height = std::max(capabilities.minImageExtent.height,
+		std::min(capabilities.maxImageExtent.height, extent.height));
+
+	return extent;
+}
+
+void VkApp::CreateSwapchain() {
+	SwapChainSupportDetails support = QuerySwapchainSupport(physical_device);
+
+	vk::SurfaceFormatKHR format = ChooseSwapSurfaceFormat(support.formats);
+	vk::PresentModeKHR mode	= ChooseSwapPresentMode(support.present_modes);
+	vk::Extent2D extent	= ChooseSwapExtent(support.capabilities);
+
+	uint32_t image_count = support.capabilities.minImageCount + 1;
+	if (
+		support.capabilities.maxImageCount > 0 and
+		image_count > support.capabilities.maxImageCount
+	) {
+		image_count = support.capabilities.maxImageCount;
+	}
+
+	vk::SwapchainCreateInfoKHR swapchain_info;
+	swapchain_info.surface = surface;
+	swapchain_info.minImageCount = image_count;
+	swapchain_info.format = format.format;
+	swapchain_info.imageColorSpace = format.colorSpace;
+	swapchain_info.imageExtent = extent;
+	swapchain_info.imageArrayLayers = 1;
+	swapchain_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+
+	
 }

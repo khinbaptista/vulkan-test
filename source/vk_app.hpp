@@ -6,9 +6,24 @@
 #include <vulkan/vulkan.hpp>
 #include <string>
 
+struct QueueFamilyIndices {
+	int graphics_family	= -1;
+	int presentation_family	= -1;
+
+	bool isComplete();
+};
+
+struct SwapChainSupportDetails {
+	vk::SurfaceCapabilitiesKHR capabilities;
+
+	std::vector<vk::SurfaceFormatKHR> formats;
+	std::vector<vk::PresentModeKHR> present_modes;
+};
+
 class VkApp {
 public:
 	std::vector<const char*> validationLayers;
+	std::vector<const char*> deviceExtensions;
 
 	VkApp(
 		std::string title = "VkApp",
@@ -37,8 +52,13 @@ protected:
 	// ##############################
 	// Vulkan stuff
 
-	vk::Instance instance;
-	VkDebugReportCallbackEXT callback;
+	vk::Instance 			instance;
+	VkDebugReportCallbackEXT	callback;
+	vk::PhysicalDevice		physical_device;
+	vk::Device			device;
+	vk::Queue			graphics_queue;
+	vk::Queue			presentation_queue;
+	vk::SurfaceKHR			surface;
 
 	void InitVulkan();
 
@@ -47,7 +67,6 @@ protected:
 	bool CheckExtensionsSupport(std::vector<const char*>);
 	bool CheckValidationLayerSupport();
 	void SetupDebugCallback();
-
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 		VkDebugReportFlagsEXT flags,
 		VkDebugReportObjectTypeEXT objType,
@@ -56,6 +75,23 @@ protected:
 		int32_t code,
 		const char* layerPrefix,
 		const char* msg,
-		void* userData
-	);
+		void* userData);
+
+	void CreateSurface();
+
+	void PickPhysicalDevice();
+	bool isDeviceSuitable(vk::PhysicalDevice);
+	QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice);
+
+	void CreateLogicalDevice();
+	bool CheckDeviceExtensionSupport(vk::PhysicalDevice);
+
+	void CreateSwapchain();
+	SwapChainSupportDetails QuerySwapchainSupport(vk::PhysicalDevice);
+	vk::SurfaceFormatKHR ChooseSwapSurfaceFormat(
+		const std::vector<vk:SurfaceFormatKHR>& available_formats);
+	vk::PresentModeKHR ChooseSwapPresentMode(
+		const std::vector<vk::PresentModeKHR>& available_modes);
+	vk::Extent2D ChooseSwapExtent(
+		const std::vector<vk::SurfaceCapabilitiesKHR>& capabilities);
 };
