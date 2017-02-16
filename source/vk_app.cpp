@@ -1,6 +1,7 @@
 #include "vk_app.hpp"
 
 #include <iostream>
+#include <fstream>
 #include <stdexcept>
 #include <functional>
 #include <algorithm>
@@ -499,5 +500,22 @@ void VkApp::CreateImageViews() {
 }
 
 void VkApp::CreateGraphicsPipeline() {
+	auto vertex_shader_code	  = ReadFile("shaders/vertex-v.spv");
+	auto fragment_shader_code = ReadFile("shaders/fragment-f.spv");
+}
 
+vector<char> VkApp::ReadFile(const string& filename) {
+	std::ifstream file(filename, std::ios::ate | std::ios::binary);
+	if (!file.is_open()) {
+		throw std::runtime_error("Failed to open file " + filename);
+	}
+
+	size_t file_size = (size_t) file.tellg();
+	vector<char> buffer(file_size);
+
+	file.seekg(0);
+	file.read(buffer.data(), file_size);
+	file.close();
+
+	return buffer;
 }

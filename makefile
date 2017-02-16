@@ -28,6 +28,9 @@ Packages = glfw3
 SourcePath  = source
 ObjectsPath = source/objects
 
+# Path to place compiled shaders
+ShadersPath = shaders
+
 # Source files names
 SourceFiles = main.cpp vk_app.cpp
 
@@ -44,8 +47,8 @@ GLSL = $(patsubst %, $(SourcePath)/%, $(ShaderFiles))
 VERT = $(filter %.vert, $(GLSL))
 FRAG = $(filter %.frag, $(GLSL))
 
-SPIRV  = $(patsubst $(SourcePath)/%.vert, $(ObjectsPath)/%-v.spv, $(VERT))
-SPIRV += $(patsubst $(SourcePath)/%.frag, $(ObjectsPath)/%-f.spv, $(FRAG))
+SPIRV  = $(patsubst $(SourcePath)/%.vert, $(ShadersPath)/%-v.spv, $(VERT))
+SPIRV += $(patsubst $(SourcePath)/%.frag, $(ShadersPath)/%-f.spv, $(FRAG))
 
 CFLAGS +=  `pkg-config --cflags $(Packages)`
 LDFLAGS += `pkg-config --static --libs $(Packages)`
@@ -78,20 +81,17 @@ $(ObjectsPath)/%.o: $(SourcePath)/%.cpp
 	$(CC) -MMD -c -o $@ $< $(CFLAGS)
 
 clean:
-	rm -f $(ObjectsPath)/*.* $(Project)
+	rm -f $(ObjectsPath)/*.* $(Project) *.spv
 	rmdir $(ObjectsPath)
 
 ##################################################
 
 shaders: $(SPIRV)
 
-#$(ObjectsPath)/%.spv: $(SourcePath)/%
-#	$(CGLSL) $(GLFLAGS) -o $@ $^
-
-$(ObjectsPath)/%-f.spv: $(SourcePath)/%.frag
+$(ShadersPath)/%-f.spv: $(SourcePath)/%.frag
 	$(CGLSL) $(GLFLAGS) -o $@ $^
 
-$(ObjectsPath)/%-v.spv: $(SourcePath)/%.vert
+$(ShadersPath)/%-v.spv: $(SourcePath)/%.vert
 	$(CGLSL) $(GLFLAGS) -o $@ $^
 
 ##################################################

@@ -105,4 +105,5 @@ protected:
 
 	void CreateImageViews();
 	void CreateGraphicsPipeline();
+	static std::vector<char> ReadFile(const std::string& filename);
 };
