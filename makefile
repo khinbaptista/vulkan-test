@@ -12,6 +12,7 @@ CFLAGS	= -Wall -std=c++14
 LDFLAGS	= -lvulkan -L$(VULKAN_SDK)/lib
 
 DEBUG = 1
+DEBUG_FLAGS = -g -ggdb
 
 ##################################################
 
@@ -39,6 +40,8 @@ LDFLAGS += `pkg-config --static --libs $(Packages)`
 
 ifeq ($(DEBUG), 0)
 CFLAGS += -DNDEBUG
+else
+CFLAGS += $(DEBUG_FLAGS)
 endif
 
 ##################################################

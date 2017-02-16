@@ -26,10 +26,6 @@ VkApp::VkApp(string t, uint32_t w, uint32_t h, bool enable_validation) {
 	#else
 	validation_enabled = true;
 	#endif
-
-	if (validation_enabled) {
-		cout << "Validation layers enabled!" << endl;
-	}
 }
 
 void VkApp::Run() {
@@ -164,7 +160,7 @@ bool VkApp::CheckValidationLayerSupport() {
 	vector<vk::LayerProperties> available_layers =
 		vk::enumerateInstanceLayerProperties();
 
-	cout << "Looking or validation layers:" << endl;
+	cout << "Looking for validation layers:" << endl;
 	for (const char* layer_name : validationLayers) {
 		bool layer_found = false;
 
