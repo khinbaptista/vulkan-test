@@ -26,6 +26,7 @@ Packages	= glfw3
 
 CPP = $(patsubst %, $(SourcePath)/%, $(SourceFiles))
 OBJ = $(patsubst $(SourcePath)/%.cpp, $(ObjectsPath)/%.o, $(CPP))
+DEP = $(OBJ:%.o=%.d)
 
 CFLAGS	+= `pkg-config --cflags $(Packages)`
 #-DNDEBUG
@@ -47,11 +48,18 @@ remake: clean all
 
 build: remake test
 
+#depend: $(DEP)
+
 $(Project): $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
+#$(DEP): $(CPP)
+#	rm -f $(DEP)
+#	$(CC) $(CFLAGS) -MM $^ -MF $(DEP);
+
+-include $(DEP)
 $(ObjectsPath)/%.o: $(SourcePath)/%.cpp
-	$(CC) -c -o $@ $^ $(CFLAGS)
+	$(CC) -MMD -c -o $@ $< $(CFLAGS)
 
 ##################################################
 
@@ -59,4 +67,4 @@ prepare:
 	mkdir $(SourcePath) $(ObjectsPath)
 
 clean:
-	rm -f $(ObjectsPath)/*.o $(Project)
+	rm -f $(ObjectsPath)/*.o $(ObjectsPath)/*.d $(Project)

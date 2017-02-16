@@ -4,11 +4,12 @@
 #include <GLFW/glfw3.h>
 
 #include <vulkan/vulkan.hpp>
+#include <vector>
 #include <string>
 
 struct QueueFamilyIndices {
-	int graphics_family	= -1;
-	int presentation_family	= -1;
+	int graphics_family = -1;
+	int present_family  = -1;
 
 	bool isComplete();
 };
@@ -27,7 +28,7 @@ public:
 
 	VkApp(
 		std::string title = "VkApp",
-		int width = 800, int height = 600,
+		uint32_t width = 800, uint32_t height = 600,
 		bool enable_validation_layers = false
 	);
 
@@ -39,8 +40,8 @@ protected:
 
 	GLFWwindow* window;
 	std::string title;
-	int width;
-	int height;
+	uint32_t width;
+	uint32_t height;
 
 	bool validation_enabled;
 
@@ -54,11 +55,17 @@ protected:
 
 	vk::Instance 			instance;
 	VkDebugReportCallbackEXT	callback;
+
 	vk::PhysicalDevice		physical_device;
 	vk::Device			device;
 	vk::Queue			graphics_queue;
 	vk::Queue			presentation_queue;
+
 	vk::SurfaceKHR			surface;
+	vk::SwapchainKHR		swapchain;
+	std::vector<vk::Image>		swapchain_images;
+	vk::Format			swapchain_format;
+	vk::Extent2D			swapchain_extent;
 
 	void InitVulkan();
 
@@ -89,9 +96,9 @@ protected:
 	void CreateSwapchain();
 	SwapChainSupportDetails QuerySwapchainSupport(vk::PhysicalDevice);
 	vk::SurfaceFormatKHR ChooseSwapSurfaceFormat(
-		const std::vector<vk:SurfaceFormatKHR>& available_formats);
+		const std::vector<vk::SurfaceFormatKHR>& available_formats);
 	vk::PresentModeKHR ChooseSwapPresentMode(
 		const std::vector<vk::PresentModeKHR>& available_modes);
 	vk::Extent2D ChooseSwapExtent(
-		const std::vector<vk::SurfaceCapabilitiesKHR>& capabilities);
+		const vk::SurfaceCapabilitiesKHR& capabilities);
 };
