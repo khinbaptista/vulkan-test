@@ -60,6 +60,12 @@ void VkApp::Cleanup() {
 	device.destroySwapchainKHR(swapchain);
 	instance.destroySurfaceKHR(surface);
 
+	int views_count = swapchain_imageviews.size();
+	for (int i = 0; i < views_count; i++) {
+		device.destroyImageView(swapchain_imageviews.back());
+		swapchain_imageviews.pop_back();
+	}
+
 	device.destroy();
 	instance.destroy();
 
@@ -76,6 +82,7 @@ void VkApp::InitVulkan() {
 	PickPhysicalDevice();
 	CreateLogicalDevice();
 	CreateSwapchain();
+	CreateImageViews();
 }
 
 void VkApp::CreateInstance() {
@@ -461,4 +468,31 @@ void VkApp::CreateSwapchain() {
 	}
 
 	swapchain_images = device.getSwapchainImagesKHR(swapchain);
+}
+
+void VkApp::CreateImageViews() {
+	swapchain_imageviews.resize(swapchain_images.size());
+
+	for (uint32_t i = 0; i < swapchain_images.size(); i++) {
+		vk::ImageViewCreateInfo view_info = vk::ImageViewCreateInfo()
+		.setImage(swapchain_images[i])
+		.setViewType(vk::ImageViewType::e2D)
+		.setFormat(swapchain_format);
+		view_info.subresourceRange
+			.setAspectMask(vk::ImageAspectFlagBits::eColor)
+			.setBaseMipLevel(0)	// optional
+			.setLevelCount(1)
+			.setBaseArrayLayer(0)	// optional
+			.setLayerCount(1);
+
+		if (swapchain_imageviews[i])
+			device.destroyImageView(swapchain_imageviews[i]);
+		vk::Result r = device.createImageView(
+			&view_info, nullptr, &swapchain_imageviews[i]
+		);
+
+		if (r != vk::Result::eSuccess) {
+			throw std::runtime_error("Failed to create image views");
+		}
+	}
 }

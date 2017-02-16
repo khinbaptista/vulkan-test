@@ -63,9 +63,10 @@ protected:
 
 	vk::SurfaceKHR			surface;
 	vk::SwapchainKHR		swapchain;
-	std::vector<vk::Image>		swapchain_images;
 	vk::Format			swapchain_format;
 	vk::Extent2D			swapchain_extent;
+	std::vector<vk::Image>		swapchain_images;
+	std::vector<vk::ImageView>	swapchain_imageviews;
 
 	void InitVulkan();
 
@@ -101,4 +102,6 @@ protected:
 		const std::vector<vk::PresentModeKHR>& available_modes);
 	vk::Extent2D ChooseSwapExtent(
 		const vk::SurfaceCapabilitiesKHR& capabilities);
+
+	void CreateImageViews();
 };
