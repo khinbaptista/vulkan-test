@@ -1,26 +1,32 @@
 ##################################################
-
+#
+#	Makefile template
+#		by Khin Baptista
+#
 ##################################################
-
-Project	= vulkan
 
 CC	= g++
 LINKER	= g++
 
-##################################################
-
 CFLAGS	= -Wall -std=c++14
 LDFLAGS	= -lvulkan -L$(VULKAN_SDK)/lib
 
+DEBUG = 1
+
 ##################################################
 
-SourcePath	= source
-ObjectsPath	= source/objects
+# Name of the project (executable binary)
+Project	= vulkan
 
-SourceFiles	= main.cpp vk_app.cpp
-#lication.cpp
+# List of packages to use with 'pkg-config'
+Packages = glfw3
 
-Packages	= glfw3
+# Path to directories
+SourcePath  = source
+ObjectsPath = source/objects
+
+# Source files names
+SourceFiles = main.cpp vk_app.cpp
 
 ##################################################
 
@@ -28,43 +34,36 @@ CPP = $(patsubst %, $(SourcePath)/%, $(SourceFiles))
 OBJ = $(patsubst $(SourcePath)/%.cpp, $(ObjectsPath)/%.o, $(CPP))
 DEP = $(OBJ:%.o=%.d)
 
-CFLAGS	+= `pkg-config --cflags $(Packages)`
-#-DNDEBUG
-LDFLAGS	+= `pkg-config --static --libs $(Packages)`
+CFLAGS +=  `pkg-config --cflags $(Packages)`
+LDFLAGS += `pkg-config --static --libs $(Packages)`
+
+ifeq ($(DEBUG), 1)
+CFLAGS += -DNDEBUG
+endif
 
 ##################################################
 
-.PHONY: all test prepare clean
+.PHONY: all clean
 
-all: object_dir $(Project)
+all: objectdir $(Project)
 
-object_dir:
+objectdir:
 	mkdir -p $(ObjectsPath)
 
-test: $(Project)
+test: all
 	./$(Project)
 
 remake: clean all
 
-build: remake test
-
-#depend: $(DEP)
-
 $(Project): $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
-
-#$(DEP): $(CPP)
-#	rm -f $(DEP)
-#	$(CC) $(CFLAGS) -MM $^ -MF $(DEP);
 
 -include $(DEP)
 $(ObjectsPath)/%.o: $(SourcePath)/%.cpp
 	$(CC) -MMD -c -o $@ $< $(CFLAGS)
 
-##################################################
-
-prepare:
-	mkdir $(SourcePath) $(ObjectsPath)
-
 clean:
 	rm -f $(ObjectsPath)/*.o $(ObjectsPath)/*.d $(Project)
+	rmdir $(ObjectsPath)
+
+##################################################
