@@ -26,6 +26,10 @@ VkApp::VkApp(string t, uint32_t w, uint32_t h, bool enable_validation) {
 	#else
 	validation_enabled = true;
 	#endif
+
+	if (validation_enabled) {
+		cout << "Validation layers enabled!" << endl;
+	}
 }
 
 void VkApp::Run() {

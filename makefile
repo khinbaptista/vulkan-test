@@ -37,7 +37,7 @@ DEP = $(OBJ:%.o=%.d)
 CFLAGS +=  `pkg-config --cflags $(Packages)`
 LDFLAGS += `pkg-config --static --libs $(Packages)`
 
-ifeq ($(DEBUG), 1)
+ifeq ($(DEBUG), 0)
 CFLAGS += -DNDEBUG
 endif
 
