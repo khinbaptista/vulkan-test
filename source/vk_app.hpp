@@ -104,4 +104,5 @@ protected:
 		const vk::SurfaceCapabilitiesKHR& capabilities);
 
 	void CreateImageViews();
+	void CreateGraphicsPipeline();
 };

@@ -83,6 +83,7 @@ void VkApp::InitVulkan() {
 	CreateLogicalDevice();
 	CreateSwapchain();
 	CreateImageViews();
+	CreateGraphicsPipeline();
 }
 
 void VkApp::CreateInstance() {
@@ -495,4 +496,8 @@ void VkApp::CreateImageViews() {
 			throw std::runtime_error("Failed to create image views");
 		}
 	}
+}
+
+void VkApp::CreateGraphicsPipeline() {
+
 }
