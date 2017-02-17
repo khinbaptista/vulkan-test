@@ -67,6 +67,7 @@ protected:
 	vk::Extent2D			swapchain_extent;
 	std::vector<vk::Image>		swapchain_images;
 	std::vector<vk::ImageView>	swapchain_imageviews;
+	vk::PipelineLayout		pipeline_layout;
 
 	void InitVulkan();
 
@@ -106,4 +107,5 @@ protected:
 	void CreateImageViews();
 	void CreateGraphicsPipeline();
 	static std::vector<char> ReadFile(const std::string& filename);
+	void CreateShaderModule(const std::vector<char>& code, vk::ShaderModule&);
 };

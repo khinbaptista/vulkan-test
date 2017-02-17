@@ -67,6 +67,8 @@ void VkApp::Cleanup() {
 		swapchain_imageviews.pop_back();
 	}
 
+	device.destroyPipelineLayout(pipeline_layout);
+
 	device.destroy();
 	instance.destroy();
 
@@ -502,6 +504,104 @@ void VkApp::CreateImageViews() {
 void VkApp::CreateGraphicsPipeline() {
 	auto vertex_shader_code	  = ReadFile("shaders/vertex-v.spv");
 	auto fragment_shader_code = ReadFile("shaders/fragment-f.spv");
+
+	vk::ShaderModule vertex_smodule;
+	vk::ShaderModule fragment_smodule;
+
+	CreateShaderModule(vertex_shader_code, vertex_smodule);
+	CreateShaderModule(fragment_shader_code, fragment_smodule);
+
+	vk::PipelineShaderStageCreateInfo vert_pipeline_info;
+	vert_pipeline_info.setStage(vk::ShaderStageFlagBits::eVertex)
+	.setModule(vertex_smodule)
+	.setPName("main");
+
+	vk::PipelineShaderStageCreateInfo frag_pipeline_info;
+	frag_pipeline_info.setStage(vk::ShaderStageFlagBits::eFragment)
+	.setModule(fragment_smodule)
+	.setPName("main");
+
+	vk::PipelineShaderStageCreateInfo shader_stages[] = {
+		vert_pipeline_info, frag_pipeline_info
+	};
+
+	vk::PipelineVertexInputStateCreateInfo vert_input_info;
+	vert_input_info.setVertexBindingDescriptionCount(0)
+	.setPVertexBindingDescriptions(nullptr)
+	.setVertexAttributeDescriptionCount(0)
+	.setPVertexAttributeDescriptions(nullptr);
+
+	vk::PipelineInputAssemblyStateCreateInfo input_assembly;
+	input_assembly.setTopology(vk::PrimitiveTopology::eTriangleList)
+	.setPrimitiveRestartEnable(false);
+
+	vk::Viewport viewport = vk::Viewport()
+	.setX(0.0f)
+	.setY(0.0f)
+	.setWidth((float) swapchain_extent.width)
+	.setHeight((float) swapchain_extent.height)
+	.setMinDepth(0.0f)
+	.setMaxDepth(1.0f);
+
+	vk::Rect2D scissor = vk::Rect2D()
+	.setOffset({ 0, 0 })
+	.setExtent(swapchain_extent);
+
+	vk::PipelineViewportStateCreateInfo viewport_state;
+	viewport_state.setViewportCount(1)
+	.setPViewports(&viewport)
+	.setScissorCount(1)
+	.setPScissors(&scissor);
+
+	vk::PipelineRasterizationStateCreateInfo rasterizer;
+	rasterizer.setDepthClampEnable(false)
+	.setRasterizerDiscardEnable(false)
+	.setPolygonMode(vk::PolygonMode::eFill)
+	.setLineWidth(1.0f)
+	.setCullMode(vk::CullModeFlagBits::eBack)
+	.setFrontFace(vk::FrontFace::eClockwise)
+	.setDepthBiasEnable(false)
+	.setDepthBiasConstantFactor(0.0f)
+	.setDepthBiasClamp(0.0f)
+	.setDepthBiasSlopeFactor(0.0f);
+
+	vk::PipelineMultisampleStateCreateInfo multisampling;
+	multisampling.setSampleShadingEnable(false)
+	.setRasterizationSamples(vk::SampleCountFlagBits::e1)
+	.setMinSampleShading(1.0f)
+	.setPSampleMask(nullptr)
+	.setAlphaToCoverageEnable(false)
+	.setAlphaToOneEnable(false);
+
+	vk::PipelineColorBlendAttachmentState color_blend_attachment;
+	color_blend_attachment.setColorWriteMask(
+		vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+		vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
+	).setBlendEnable(false)
+	.setSrcColorBlendFactor(vk::BlendFactor::eOne)
+	.setDstColorBlendFactor(vk::BlendFactor::eZero)
+	.setColorBlendOp(vk::BlendOp::eAdd)
+	.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
+	.setDstAlphaBlendFactor(vk::BlendFactor::eZero)
+	.setAlphaBlendOp(vk::BlendOp::eAdd);
+
+	vk::PipelineColorBlendStateCreateInfo color_blending;
+	color_blending.setLogicOpEnable(false)
+	.setLogicOp(vk::LogicOp::eCopy)
+	.setAttachmentCount(1)
+	.setPAttachments(&color_blend_attachment)
+	.setBlendConstants({ 0.0f, 0.0f, 0.0f, 0.0f });
+
+	vk::PipelineLayoutCreateInfo layout_info;
+	layout_info.setSetLayoutCount(0)
+	.setPSetLayouts(nullptr)
+	.setPushConstantRangeCount(0)
+	.setPPushConstantRanges(nullptr);
+
+	pipeline_layout = device.createPipelineLayout(layout_info);
+
+	device.destroyShaderModule(fragment_smodule);
+	device.destroyShaderModule(vertex_smodule);
 }
 
 vector<char> VkApp::ReadFile(const string& filename) {
@@ -518,4 +618,15 @@ vector<char> VkApp::ReadFile(const string& filename) {
 	file.close();
 
 	return buffer;
+}
+
+void VkApp::CreateShaderModule(const vector<char>& code, vk::ShaderModule& module) {
+	vk::ShaderModuleCreateInfo module_info = vk::ShaderModuleCreateInfo()
+	.setCodeSize(code.size())
+	.setPCode((uint32_t*) code.data());
+
+	vk::Result r = device.createShaderModule(&module_info, nullptr, &module);
+	if (r != vk::Result::eSuccess) {
+		throw std::runtime_error("Failed to create shader module");
+	}
 }
