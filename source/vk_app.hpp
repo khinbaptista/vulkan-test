@@ -68,6 +68,8 @@ protected:
 	std::vector<vk::Image>		swapchain_images;
 	std::vector<vk::ImageView>	swapchain_imageviews;
 	vk::PipelineLayout		pipeline_layout;
+	vk::RenderPass			render_pass;
+	vk::Pipeline			graphics_pipeline;
 
 	void InitVulkan();
 
@@ -105,6 +107,7 @@ protected:
 		const vk::SurfaceCapabilitiesKHR& capabilities);
 
 	void CreateImageViews();
+	void CreateRenderPass();
 	void CreateGraphicsPipeline();
 	static std::vector<char> ReadFile(const std::string& filename);
 	void CreateShaderModule(const std::vector<char>& code, vk::ShaderModule&);

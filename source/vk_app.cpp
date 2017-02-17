@@ -61,13 +61,15 @@ void VkApp::Cleanup() {
 	device.destroySwapchainKHR(swapchain);
 	instance.destroySurfaceKHR(surface);
 
-	int views_count = swapchain_imageviews.size();
+	size_t views_count = swapchain_imageviews.size();
 	for (int i = 0; i < views_count; i++) {
 		device.destroyImageView(swapchain_imageviews.back());
 		swapchain_imageviews.pop_back();
 	}
 
 	device.destroyPipelineLayout(pipeline_layout);
+	device.destroyRenderPass(render_pass);
+	device.destroyPipeline(graphics_pipeline);
 
 	device.destroy();
 	instance.destroy();
@@ -86,6 +88,7 @@ void VkApp::InitVulkan() {
 	CreateLogicalDevice();
 	CreateSwapchain();
 	CreateImageViews();
+	CreateRenderPass();
 	CreateGraphicsPipeline();
 }
 
@@ -107,11 +110,11 @@ void VkApp::CreateInstance() {
 
 	vk::InstanceCreateInfo instance_info;
 	instance_info.pApplicationInfo = &app_info;
-	instance_info.enabledExtensionCount = extensions.size();
+	instance_info.enabledExtensionCount = (uint32_t) extensions.size();
 	instance_info.ppEnabledExtensionNames = extensions.data();
 
 	if (validation_enabled) {
-		instance_info.enabledLayerCount = validationLayers.size();
+		instance_info.enabledLayerCount = (uint32_t) validationLayers.size();
 		instance_info.ppEnabledLayerNames = validationLayers.data();
 	}
 
@@ -273,15 +276,15 @@ bool VkApp::isDeviceSuitable(vk::PhysicalDevice device) {
 		SwapChainSupportDetails swapchain_support =
 			QuerySwapchainSupport(device);
 
-		swapchain_adequate = !swapchain_support.formats.empty() and
+		swapchain_adequate = !swapchain_support.formats.empty() &&
 			!swapchain_support.present_modes.empty();
 	}
 
-	return indices.isComplete() and extensions_supported and swapchain_adequate;
+	return indices.isComplete() && extensions_supported && swapchain_adequate;
 }
 
 bool QueueFamilyIndices::isComplete() {
-	return graphics_family >= 0 and present_family >= 0;
+	return graphics_family >= 0 && present_family >= 0;
 }
 
 QueueFamilyIndices VkApp::FindQueueFamilies(vk::PhysicalDevice device) {
@@ -333,10 +336,10 @@ void VkApp::CreateLogicalDevice() {
 	device_info.queueCreateInfoCount = (uint32_t) queue_infos.size();
 	device_info.pQueueCreateInfos = queue_infos.data();
 	device_info.pEnabledFeatures = &device_features;
-	device_info.enabledExtensionCount = deviceExtensions.size();
+	device_info.enabledExtensionCount = (uint32_t) deviceExtensions.size();
 	device_info.ppEnabledExtensionNames = deviceExtensions.data();
 	if (validation_enabled) {
-		device_info.enabledLayerCount = validationLayers.size();
+		device_info.enabledLayerCount = (uint32_t) validationLayers.size();
 		device_info.ppEnabledLayerNames = validationLayers.data();
 	}
 
@@ -378,7 +381,7 @@ vk::SurfaceFormatKHR VkApp::ChooseSwapSurfaceFormat(
 	const vector<vk::SurfaceFormatKHR>& available_formats
 ) {
 	if (
-		available_formats.size() == 1 and
+		available_formats.size() == 1 &&
 		available_formats[0].format == vk::Format::eUndefined
 	) {
 		return { vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
@@ -386,7 +389,7 @@ vk::SurfaceFormatKHR VkApp::ChooseSwapSurfaceFormat(
 
 	for (const auto& format : available_formats) {
 		if (
-			format.format == vk::Format::eB8G8R8A8Unorm and
+			format.format == vk::Format::eB8G8R8A8Unorm &&
 			format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear
 		) {
 			return format;
@@ -434,7 +437,7 @@ void VkApp::CreateSwapchain() {
 
 	uint32_t image_count = support.capabilities.minImageCount + 1;
 	if (
-		support.capabilities.maxImageCount > 0 and
+		support.capabilities.maxImageCount > 0 &&
 		image_count > support.capabilities.maxImageCount
 	) {
 		image_count = support.capabilities.maxImageCount;
@@ -502,9 +505,13 @@ void VkApp::CreateImageViews() {
 }
 
 void VkApp::CreateGraphicsPipeline() {
+#ifdef _WIN32
+	auto vertex_shader_code = ReadFile("../../../shaders/vertex-v.spv");
+	auto fragment_shader_code = ReadFile("../../../shaders/fragment-f.spv");
+#else
 	auto vertex_shader_code	  = ReadFile("shaders/vertex-v.spv");
 	auto fragment_shader_code = ReadFile("shaders/fragment-f.spv");
-
+#endif
 	vk::ShaderModule vertex_smodule;
 	vk::ShaderModule fragment_smodule;
 
@@ -600,6 +607,26 @@ void VkApp::CreateGraphicsPipeline() {
 
 	pipeline_layout = device.createPipelineLayout(layout_info);
 
+	vk::GraphicsPipelineCreateInfo pipeline_info;
+	pipeline_info.setStageCount(2)
+	.setPStages(shader_stages)
+	.setPVertexInputState(&vert_input_info)
+	.setPInputAssemblyState(&input_assembly)
+	.setPViewportState(&viewport_state)
+	.setPRasterizationState(&rasterizer)
+	.setPMultisampleState(&multisampling)
+	.setPDepthStencilState(nullptr)
+	.setPColorBlendState(&color_blending)
+	.setPDynamicState(nullptr)
+	.setLayout(pipeline_layout)
+	.setRenderPass(render_pass)
+	.setSubpass(0)
+	.setBasePipelineHandle(VK_NULL_HANDLE)
+	.setBasePipelineIndex(-1);
+
+	graphics_pipeline =
+		device.createGraphicsPipeline(VK_NULL_HANDLE, pipeline_info);
+
 	device.destroyShaderModule(fragment_smodule);
 	device.destroyShaderModule(vertex_smodule);
 }
@@ -629,4 +656,33 @@ void VkApp::CreateShaderModule(const vector<char>& code, vk::ShaderModule& modul
 	if (r != vk::Result::eSuccess) {
 		throw std::runtime_error("Failed to create shader module");
 	}
+}
+
+void VkApp::CreateRenderPass() {
+	vk::AttachmentDescription color_attachment;
+	color_attachment.setFormat(swapchain_format)
+	.setSamples(vk::SampleCountFlagBits::e1)
+	.setLoadOp(vk::AttachmentLoadOp::eClear)
+	.setStoreOp(vk::AttachmentStoreOp::eStore)
+	.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+	.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+	.setInitialLayout(vk::ImageLayout::eUndefined)
+	.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+
+	vk::AttachmentReference color_attachment_ref;
+	color_attachment_ref.setAttachment(0)
+	.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+	vk::SubpassDescription subpass;
+	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+	.setColorAttachmentCount(1)
+	.setPColorAttachments(&color_attachment_ref);
+
+	vk::RenderPassCreateInfo renderpass_info;
+	renderpass_info.setAttachmentCount(1)
+	.setPAttachments(&color_attachment)
+	.setSubpassCount(1)
+	.setPSubpasses(&subpass);
+
+	render_pass = device.createRenderPass(renderpass_info);
 }
