@@ -62,7 +62,7 @@ void VkApp::Cleanup() {
 	instance.destroySurfaceKHR(surface);
 
 	size_t views_count = swapchain_imageviews.size();
-	for (int i = 0; i < views_count; i++) {
+	for (size_t i = 0; i < views_count; i++) {
 		device.destroyImageView(swapchain_imageviews.back());
 		swapchain_imageviews.pop_back();
 	}
