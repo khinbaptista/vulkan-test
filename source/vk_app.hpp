@@ -48,6 +48,7 @@ protected:
 
 	void InitWindow();
 	void MainLoop();
+	void DrawFrame();
 	void Cleanup();
 
 	// ##############################
@@ -72,6 +73,12 @@ protected:
 	vk::PipelineLayout		pipeline_layout;
 	vk::RenderPass			render_pass;
 	vk::Pipeline			graphics_pipeline;
+
+	vk::CommandPool			command_pool;
+	std::vector<vk::CommandBuffer>	command_buffers;
+
+	vk::Semaphore			semaphore_image_available;
+	vk::Semaphore			semaphore_render_finished;
 
 	void InitVulkan();
 
@@ -112,6 +119,12 @@ protected:
 	void CreateRenderPass();
 	void CreateGraphicsPipeline();
 	void CreateFramebuffers();
+
 	static std::vector<char> ReadFile(const std::string& filename);
 	void CreateShaderModule(const std::vector<char>& code, vk::ShaderModule&);
+
+	void CreateCommandPool();
+	void CreateCommandBuffers();
+
+	void CreateSemaphores();
 };

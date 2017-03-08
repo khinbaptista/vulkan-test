@@ -50,16 +50,22 @@ void VkApp::InitWindow() {
 void VkApp::MainLoop() {
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
+		DrawFrame();
 	}
 }
 
 void VkApp::Cleanup() {
+	device.waitIdle();
+
+	glfwDestroyWindow(window);
+
 	auto func = (PFN_vkDestroyDebugReportCallbackEXT)
 		instance.getProcAddr("vkDestroyDebugReportCallbackEXT");
 	if (func != nullptr) { func(instance, callback, nullptr); }
 
 	device.destroySwapchainKHR(swapchain);
 	instance.destroySurfaceKHR(surface);
+	device.destroyCommandPool(command_pool);
 
 	size_t views_count = swapchain_imageviews.size();
 	for (size_t i = 0; i < views_count; i++) {
@@ -73,14 +79,15 @@ void VkApp::Cleanup() {
 		swapchain_framebuffers.pop_back();
 	}
 
+	device.destroySemaphore(semaphore_render_finished);
+	device.destroySemaphore(semaphore_image_available);
+
 	device.destroyPipelineLayout(pipeline_layout);
 	device.destroyRenderPass(render_pass);
 	device.destroyPipeline(graphics_pipeline);
 
 	device.destroy();
 	instance.destroy();
-
-	glfwDestroyWindow(window);
 }
 
 // #############################################################################
@@ -97,6 +104,9 @@ void VkApp::InitVulkan() {
 	CreateRenderPass();
 	CreateGraphicsPipeline();
 	CreateFramebuffers();
+	CreateCommandPool();
+	CreateCommandBuffers();
+	CreateSemaphores();
 }
 
 void VkApp::CreateInstance() {
@@ -125,11 +135,8 @@ void VkApp::CreateInstance() {
 		instance_info.ppEnabledLayerNames = validationLayers.data();
 	}
 
-	instance.destroy();
-	vk::Result r = vk::createInstance(&instance_info, nullptr, &instance);
-	if (r != vk::Result::eSuccess) {
-		throw std::runtime_error("Failed to create Vulkan instance");
-	}
+	if (instance) instance.destroy();
+	instance = vk::createInstance(instance_info);
 }
 
 vector<const char*> VkApp::GetRequiredExtensions() {
@@ -350,10 +357,7 @@ void VkApp::CreateLogicalDevice() {
 		device_info.ppEnabledLayerNames = validationLayers.data();
 	}
 
-	vk::Result r = physical_device.createDevice(&device_info, nullptr, &device);
-	if (r != vk::Result::eSuccess) {
-		throw std::runtime_error("Failed to create logical device");
-	}
+	device = physical_device.createDevice(device_info);
 
 	graphics_queue = device.getQueue(indices.graphics_family, 0);
 	presentation_queue = device.getQueue(indices.present_family, 0);
@@ -496,18 +500,7 @@ void VkApp::CreateImageViews() {
 			.setLayerCount(1);
 
 		if (swapchain_imageviews[i]) device.destroyImageView(swapchain_imageviews[i]);
-
-		/*auto r = device.createImageView(&view_info, nullptr, &swapchain_imageviews[i]);
-
-		if (r != vk::Result::eSuccess) {
-			throw std::runtime_error("Failed to create image views");
-		}*/
-
-		try {
-			swapchain_imageviews[i] = device.createImageView(view_info);
-		} catch (std::exception e) {
-			throw std::runtime_error("Failed to create image views");
-		}
+		swapchain_imageviews[i] = device.createImageView(view_info);
 	}
 }
 
@@ -631,8 +624,7 @@ void VkApp::CreateGraphicsPipeline() {
 	.setBasePipelineHandle(VK_NULL_HANDLE)
 	.setBasePipelineIndex(-1);
 
-	graphics_pipeline =
-		device.createGraphicsPipeline(VK_NULL_HANDLE, pipeline_info);
+	graphics_pipeline = device.createGraphicsPipeline(VK_NULL_HANDLE, pipeline_info);
 
 	device.destroyShaderModule(fragment_smodule);
 	device.destroyShaderModule(vertex_smodule);
@@ -652,11 +644,7 @@ void VkApp::CreateFramebuffers() {
 		.setHeight(swapchain_extent.height)
 		.setLayers(1);
 
-		try {
-			swapchain_framebuffers[i] = device.createFramebuffer(framebuffer_info);
-		} catch (std::exception e) {
-			throw std::runtime_error("Failed to create framebuffer");
-		}
+		swapchain_framebuffers[i] = device.createFramebuffer(framebuffer_info);
 	}
 }
 
@@ -681,15 +669,12 @@ void VkApp::CreateShaderModule(const vector<char>& code, vk::ShaderModule& modul
 	.setCodeSize(code.size())
 	.setPCode((uint32_t*) code.data());
 
-	vk::Result r = device.createShaderModule(&module_info, nullptr, &module);
-	if (r != vk::Result::eSuccess) {
-		throw std::runtime_error("Failed to create shader module");
-	}
+	module = device.createShaderModule(module_info);
 }
 
 void VkApp::CreateRenderPass() {
-	vk::AttachmentDescription color_attachment;
-	color_attachment.setFormat(swapchain_format)
+	auto color_attachment = vk::AttachmentDescription()
+	.setFormat(swapchain_format)
 	.setSamples(vk::SampleCountFlagBits::e1)
 	.setLoadOp(vk::AttachmentLoadOp::eClear)
 	.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -698,8 +683,8 @@ void VkApp::CreateRenderPass() {
 	.setInitialLayout(vk::ImageLayout::eUndefined)
 	.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
-	vk::AttachmentReference color_attachment_ref;
-	color_attachment_ref.setAttachment(0)
+	auto color_attachment_ref = vk::AttachmentReference()
+	.setAttachment(0)
 	.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
 	vk::SubpassDescription subpass;
@@ -707,11 +692,108 @@ void VkApp::CreateRenderPass() {
 	.setColorAttachmentCount(1)
 	.setPColorAttachments(&color_attachment_ref);
 
+	auto dependency = vk::SubpassDependency()
+	.setSrcSubpass(VK_SUBPASS_EXTERNAL)
+	.setDstSubpass(0)
+	.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+	.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+	.setDstAccessMask(
+		vk::AccessFlagBits::eColorAttachmentRead |
+		vk::AccessFlagBits::eColorAttachmentWrite
+	);
+
 	vk::RenderPassCreateInfo renderpass_info;
 	renderpass_info.setAttachmentCount(1)
 	.setPAttachments(&color_attachment)
 	.setSubpassCount(1)
-	.setPSubpasses(&subpass);
+	.setPSubpasses(&subpass)
+	.setDependencyCount(1)
+	.setPDependencies(&dependency);
 
 	render_pass = device.createRenderPass(renderpass_info);
+}
+
+void VkApp::CreateCommandPool() {
+	QueueFamilyIndices queue_families_indices = FindQueueFamilies(physical_device);
+
+	auto command_pool_info = vk::CommandPoolCreateInfo()
+	.setQueueFamilyIndex(queue_families_indices.graphics_family);
+
+	command_pool = device.createCommandPool(command_pool_info);
+}
+
+void VkApp::CreateCommandBuffers() {
+	command_buffers.resize(swapchain_framebuffers.size());
+
+	auto allocate_info = vk::CommandBufferAllocateInfo()
+	.setCommandPool(command_pool)
+	.setLevel(vk::CommandBufferLevel::ePrimary)
+	.setCommandBufferCount((uint32_t) command_buffers.size());
+
+	command_buffers = device.allocateCommandBuffers(allocate_info);
+
+	for (size_t i = 0; i < command_buffers.size(); i++) {
+		auto begin_info = vk::CommandBufferBeginInfo()
+		.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse)
+		.setPInheritanceInfo(nullptr);
+
+		command_buffers[i].begin(begin_info);
+
+		auto clear_color = vk::ClearValue(std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f });
+		auto renderpass_info = vk::RenderPassBeginInfo()
+		.setRenderPass(render_pass)
+		.setFramebuffer(swapchain_framebuffers[i])
+		.setRenderArea({ { 0, 0 }, swapchain_extent })
+		.setClearValueCount(1)
+		.setPClearValues(&clear_color);
+
+		command_buffers[i].beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
+		command_buffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline);
+		command_buffers[i].draw(3, 1, 0, 0); // vertex count, instance count, first vertex and first instance
+		command_buffers[i].endRenderPass();
+
+		command_buffers[i].end();
+	}
+
+}
+
+void VkApp::DrawFrame() {
+	uint32_t image_index;
+	device.acquireNextImageKHR(
+		swapchain,
+		std::numeric_limits<uint64_t>::max(),
+		semaphore_image_available,
+		VK_NULL_HANDLE,
+		&image_index
+	);
+
+	vk::Semaphore wait_semaphores[]   = { semaphore_image_available };
+	vk::Semaphore signal_semaphores[] = { semaphore_render_finished };
+	vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+
+	auto submit_info = vk::SubmitInfo()
+	.setWaitSemaphoreCount(1)
+	.setPWaitSemaphores(wait_semaphores)
+	.setPWaitDstStageMask(wait_stages)
+	.setCommandBufferCount(1)
+	.setPCommandBuffers(&command_buffers[image_index])
+	.setSignalSemaphoreCount(1)
+	.setPSignalSemaphores(signal_semaphores);
+
+	graphics_queue.submit({ submit_info }, VK_NULL_HANDLE);
+
+	vk::SwapchainKHR swapchains[] = { swapchain };
+	auto present_info = vk::PresentInfoKHR()
+	.setWaitSemaphoreCount(1)
+	.setPWaitSemaphores(signal_semaphores)
+	.setSwapchainCount(1)
+	.setPSwapchains(swapchains)
+	.setPImageIndices(&image_index);
+
+	presentation_queue.presentKHR(present_info);
+}
+
+void VkApp::CreateSemaphores() {
+	semaphore_image_available = device.createSemaphore({});
+	semaphore_render_finished = device.createSemaphore({});
 }
