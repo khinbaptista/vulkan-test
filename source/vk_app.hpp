@@ -33,6 +33,7 @@ public:
 	);
 
 	void Run();
+	static void OnWindowResized(GLFWwindow*, int width, int height);
 
 protected:
 	// ##############################
@@ -107,6 +108,7 @@ protected:
 	bool CheckDeviceExtensionSupport(vk::PhysicalDevice);
 
 	void CreateSwapchain();
+	void RecreateSwapchain();
 	SwapChainSupportDetails QuerySwapchainSupport(vk::PhysicalDevice);
 	vk::SurfaceFormatKHR ChooseSwapSurfaceFormat(
 		const std::vector<vk::SurfaceFormatKHR>& available_formats);

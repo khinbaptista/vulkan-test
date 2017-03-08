@@ -42,9 +42,12 @@ void VkApp::InitWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
+
+	glfwSetWindowUserPointer(window, this);
+	glfwSetWindowSizeCallback(window, VkApp::OnWindowResized);
 }
 
 void VkApp::MainLoop() {
@@ -56,8 +59,6 @@ void VkApp::MainLoop() {
 
 void VkApp::Cleanup() {
 	device.waitIdle();
-
-	glfwDestroyWindow(window);
 
 	auto func = (PFN_vkDestroyDebugReportCallbackEXT)
 		instance.getProcAddr("vkDestroyDebugReportCallbackEXT");
@@ -88,6 +89,8 @@ void VkApp::Cleanup() {
 
 	device.destroy();
 	instance.destroy();
+
+	glfwDestroyWindow(window);
 }
 
 // #############################################################################
@@ -449,6 +452,7 @@ void VkApp::CreateSwapchain() {
 		image_count = support.capabilities.maxImageCount;
 	}
 
+	vk::SwapchainKHR old_swapchain = swapchain;
 	vk::SwapchainCreateInfoKHR swapchain_info;
 	swapchain_info.surface = surface;
 	swapchain_info.minImageCount = image_count;
@@ -474,13 +478,33 @@ void VkApp::CreateSwapchain() {
 	swapchain_info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
 	swapchain_info.presentMode = mode;
 	swapchain_info.clipped = true;
+	swapchain_info.oldSwapchain = old_swapchain;
 
-	vk::Result r = device.createSwapchainKHR(&swapchain_info, nullptr, &swapchain);
-	if (r != vk::Result::eSuccess) {
-		throw std::runtime_error("Failed to create swapchain");
-	}
+	vk::SwapchainKHR new_swapchain;
+	new_swapchain = device.createSwapchainKHR(swapchain_info);
 
+	swapchain = new_swapchain;
 	swapchain_images = device.getSwapchainImagesKHR(swapchain);
+}
+
+void VkApp::RecreateSwapchain() {
+	device.waitIdle();
+
+	CreateSwapchain();
+	CreateImageViews();
+	CreateRenderPass();
+	CreateGraphicsPipeline();
+	CreateFramebuffers();
+	CreateCommandBuffers();
+}
+
+void VkApp::OnWindowResized(GLFWwindow* window, int w, int h) {
+	if (w == 0 || h == 0) return;
+
+	VkApp *app = reinterpret_cast<VkApp*>(glfwGetWindowUserPointer(window));
+	app->width = w;
+	app->height = h;
+	app->RecreateSwapchain();
 }
 
 void VkApp::CreateImageViews() {
@@ -505,26 +529,26 @@ void VkApp::CreateImageViews() {
 }
 
 void VkApp::CreateGraphicsPipeline() {
-#ifdef _WIN32
-	auto vertex_shader_code = ReadFile("../../../shaders/vertex-v.spv");
-	auto fragment_shader_code = ReadFile("../../../shaders/fragment-f.spv");
-#else
-	auto vertex_shader_code	  = ReadFile("shaders/vertex-v.spv");
-	auto fragment_shader_code = ReadFile("shaders/fragment-f.spv");
-#endif
+	#ifdef _WIN32
+		auto vertex_shader_code = ReadFile("../../../shaders/vertex-v.spv");
+		auto fragment_shader_code = ReadFile("../../../shaders/fragment-f.spv");
+	#else
+		auto vertex_shader_code	  = ReadFile("shaders/vertex-v.spv");
+		auto fragment_shader_code = ReadFile("shaders/fragment-f.spv");
+	#endif
 	vk::ShaderModule vertex_smodule;
 	vk::ShaderModule fragment_smodule;
 
 	CreateShaderModule(vertex_shader_code, vertex_smodule);
 	CreateShaderModule(fragment_shader_code, fragment_smodule);
 
-	vk::PipelineShaderStageCreateInfo vert_pipeline_info;
-	vert_pipeline_info.setStage(vk::ShaderStageFlagBits::eVertex)
+	auto vert_pipeline_info = vk::PipelineShaderStageCreateInfo()
+	.setStage(vk::ShaderStageFlagBits::eVertex)
 	.setModule(vertex_smodule)
 	.setPName("main");
 
-	vk::PipelineShaderStageCreateInfo frag_pipeline_info;
-	frag_pipeline_info.setStage(vk::ShaderStageFlagBits::eFragment)
+	auto frag_pipeline_info = vk::PipelineShaderStageCreateInfo()
+	.setStage(vk::ShaderStageFlagBits::eFragment)
 	.setModule(fragment_smodule)
 	.setPName("main");
 
@@ -532,17 +556,17 @@ void VkApp::CreateGraphicsPipeline() {
 		vert_pipeline_info, frag_pipeline_info
 	};
 
-	vk::PipelineVertexInputStateCreateInfo vert_input_info;
-	vert_input_info.setVertexBindingDescriptionCount(0)
+	auto vert_input_info = vk::PipelineVertexInputStateCreateInfo()
+	.setVertexBindingDescriptionCount(0)
 	.setPVertexBindingDescriptions(nullptr)
 	.setVertexAttributeDescriptionCount(0)
 	.setPVertexAttributeDescriptions(nullptr);
 
-	vk::PipelineInputAssemblyStateCreateInfo input_assembly;
-	input_assembly.setTopology(vk::PrimitiveTopology::eTriangleList)
+	auto input_assembly = vk::PipelineInputAssemblyStateCreateInfo()
+	.setTopology(vk::PrimitiveTopology::eTriangleList)
 	.setPrimitiveRestartEnable(false);
 
-	vk::Viewport viewport = vk::Viewport()
+	auto viewport = vk::Viewport()
 	.setX(0.0f)
 	.setY(0.0f)
 	.setWidth((float) swapchain_extent.width)
@@ -550,18 +574,18 @@ void VkApp::CreateGraphicsPipeline() {
 	.setMinDepth(0.0f)
 	.setMaxDepth(1.0f);
 
-	vk::Rect2D scissor = vk::Rect2D()
+	auto scissor = vk::Rect2D()
 	.setOffset({ 0, 0 })
 	.setExtent(swapchain_extent);
 
-	vk::PipelineViewportStateCreateInfo viewport_state;
-	viewport_state.setViewportCount(1)
+	auto viewport_state = vk::PipelineViewportStateCreateInfo()
+	.setViewportCount(1)
 	.setPViewports(&viewport)
 	.setScissorCount(1)
 	.setPScissors(&scissor);
 
-	vk::PipelineRasterizationStateCreateInfo rasterizer;
-	rasterizer.setDepthClampEnable(false)
+	auto rasterizer = vk::PipelineRasterizationStateCreateInfo()
+	.setDepthClampEnable(false)
 	.setRasterizerDiscardEnable(false)
 	.setPolygonMode(vk::PolygonMode::eFill)
 	.setLineWidth(1.0f)
@@ -572,16 +596,16 @@ void VkApp::CreateGraphicsPipeline() {
 	.setDepthBiasClamp(0.0f)
 	.setDepthBiasSlopeFactor(0.0f);
 
-	vk::PipelineMultisampleStateCreateInfo multisampling;
-	multisampling.setSampleShadingEnable(false)
+	auto multisampling = vk::PipelineMultisampleStateCreateInfo()
+	.setSampleShadingEnable(false)
 	.setRasterizationSamples(vk::SampleCountFlagBits::e1)
 	.setMinSampleShading(1.0f)
 	.setPSampleMask(nullptr)
 	.setAlphaToCoverageEnable(false)
 	.setAlphaToOneEnable(false);
 
-	vk::PipelineColorBlendAttachmentState color_blend_attachment;
-	color_blend_attachment.setColorWriteMask(
+	auto color_blend_attachment = vk::PipelineColorBlendAttachmentState()
+	.setColorWriteMask(
 		vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
 		vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA )
 	.setBlendEnable(false)
@@ -592,23 +616,23 @@ void VkApp::CreateGraphicsPipeline() {
 	.setDstAlphaBlendFactor(vk::BlendFactor::eZero)
 	.setAlphaBlendOp(vk::BlendOp::eAdd);
 
-	vk::PipelineColorBlendStateCreateInfo color_blending;
-	color_blending.setLogicOpEnable(false)
+	auto color_blending = vk::PipelineColorBlendStateCreateInfo()
+	.setLogicOpEnable(false)
 	.setLogicOp(vk::LogicOp::eCopy)
 	.setAttachmentCount(1)
 	.setPAttachments(&color_blend_attachment)
 	.setBlendConstants({ 0.0f, 0.0f, 0.0f, 0.0f });
 
-	vk::PipelineLayoutCreateInfo layout_info;
-	layout_info.setSetLayoutCount(0)
+	auto layout_info = vk::PipelineLayoutCreateInfo()
+	.setSetLayoutCount(0)
 	.setPSetLayouts(nullptr)
 	.setPushConstantRangeCount(0)
 	.setPPushConstantRanges(nullptr);
 
 	pipeline_layout = device.createPipelineLayout(layout_info);
 
-	vk::GraphicsPipelineCreateInfo pipeline_info;
-	pipeline_info.setStageCount(2)
+	auto pipeline_info = vk::GraphicsPipelineCreateInfo()
+	.setStageCount(2)
 	.setPStages(shader_stages)
 	.setPVertexInputState(&vert_input_info)
 	.setPInputAssemblyState(&input_assembly)
@@ -624,6 +648,7 @@ void VkApp::CreateGraphicsPipeline() {
 	.setBasePipelineHandle(VK_NULL_HANDLE)
 	.setBasePipelineIndex(-1);
 
+	if (graphics_pipeline) device.destroyPipeline(graphics_pipeline);
 	graphics_pipeline = device.createGraphicsPipeline(VK_NULL_HANDLE, pipeline_info);
 
 	device.destroyShaderModule(fragment_smodule);
@@ -644,6 +669,7 @@ void VkApp::CreateFramebuffers() {
 		.setHeight(swapchain_extent.height)
 		.setLayers(1);
 
+		if (swapchain_framebuffers[i]) device.destroyFramebuffer(swapchain_framebuffers[i]);
 		swapchain_framebuffers[i] = device.createFramebuffer(framebuffer_info);
 	}
 }
@@ -710,6 +736,7 @@ void VkApp::CreateRenderPass() {
 	.setDependencyCount(1)
 	.setPDependencies(&dependency);
 
+	if (render_pass) device.destroyRenderPass(render_pass);
 	render_pass = device.createRenderPass(renderpass_info);
 }
 
@@ -719,10 +746,15 @@ void VkApp::CreateCommandPool() {
 	auto command_pool_info = vk::CommandPoolCreateInfo()
 	.setQueueFamilyIndex(queue_families_indices.graphics_family);
 
+	if (command_pool) device.destroyCommandPool(command_pool);
 	command_pool = device.createCommandPool(command_pool_info);
 }
 
 void VkApp::CreateCommandBuffers() {
+	if (command_buffers.size() > 0) {
+		device.freeCommandBuffers(command_pool, command_buffers);
+	}
+
 	command_buffers.resize(swapchain_framebuffers.size());
 
 	auto allocate_info = vk::CommandBufferAllocateInfo()
