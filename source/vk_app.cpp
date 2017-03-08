@@ -67,6 +67,12 @@ void VkApp::Cleanup() {
 		swapchain_imageviews.pop_back();
 	}
 
+	size_t framebuffer_count = swapchain_framebuffers.size();
+	for (size_t i = 0; i < framebuffer_count; i++) {
+		device.destroyFramebuffer(swapchain_framebuffers.back());
+		swapchain_framebuffers.pop_back();
+	}
+
 	device.destroyPipelineLayout(pipeline_layout);
 	device.destroyRenderPass(render_pass);
 	device.destroyPipeline(graphics_pipeline);
@@ -90,6 +96,7 @@ void VkApp::InitVulkan() {
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
+	CreateFramebuffers();
 }
 
 void VkApp::CreateInstance() {
@@ -171,8 +178,7 @@ bool VkApp::CheckExtensionsSupport(vector<const char*> extensions) {
 }
 
 bool VkApp::CheckValidationLayerSupport() {
-	vector<vk::LayerProperties> available_layers =
-		vk::enumerateInstanceLayerProperties();
+	vector<vk::LayerProperties> available_layers = vk::enumerateInstanceLayerProperties();
 
 	cout << "Looking for validation layers:" << endl;
 	for (const char* layer_name : validationLayers) {
@@ -273,11 +279,10 @@ bool VkApp::isDeviceSuitable(vk::PhysicalDevice device) {
 
 	bool swapchain_adequate = false;
 	if (extensions_supported) {
-		SwapChainSupportDetails swapchain_support =
-			QuerySwapchainSupport(device);
+		SwapChainSupportDetails swapchain_support = QuerySwapchainSupport(device);
 
-		swapchain_adequate = !swapchain_support.formats.empty() &&
-			!swapchain_support.present_modes.empty();
+		swapchain_adequate =
+		!swapchain_support.formats.empty() && !swapchain_support.present_modes.empty();
 	}
 
 	return indices.isComplete() && extensions_supported && swapchain_adequate;
@@ -295,7 +300,9 @@ QueueFamilyIndices VkApp::FindQueueFamilies(vk::PhysicalDevice device) {
 
 	int i = 0;
 	for (const auto& queue_family : queue_families) {
-		if (queue_family.queueCount > 0 && queue_family.queueFlags & vk::QueueFlagBits::eGraphics) {
+		if (	queue_family.queueCount > 0 &&
+			queue_family.queueFlags & vk::QueueFlagBits::eGraphics)
+		{
 			indices.graphics_family = i;
 		}
 
@@ -355,10 +362,7 @@ void VkApp::CreateLogicalDevice() {
 bool VkApp::CheckDeviceExtensionSupport(vk::PhysicalDevice device) {
 	vector<vk::ExtensionProperties> available_extensions
 		= device.enumerateDeviceExtensionProperties();
-
-	set<string> required_extensions(
-		deviceExtensions.begin(), deviceExtensions.end()
-	);
+	set<string> required_extensions(deviceExtensions.begin(), deviceExtensions.end());
 
 	for (const auto& extension : available_extensions) {
 		required_extensions.erase(extension.extensionName);
@@ -377,9 +381,8 @@ SwapChainSupportDetails VkApp::QuerySwapchainSupport(vk::PhysicalDevice device) 
 	return details;
 }
 
-vk::SurfaceFormatKHR VkApp::ChooseSwapSurfaceFormat(
-	const vector<vk::SurfaceFormatKHR>& available_formats
-) {
+vk::SurfaceFormatKHR
+VkApp::ChooseSwapSurfaceFormat(const vector<vk::SurfaceFormatKHR>& available_formats) {
 	if (
 		available_formats.size() == 1 &&
 		available_formats[0].format == vk::Format::eUndefined
@@ -436,10 +439,9 @@ void VkApp::CreateSwapchain() {
 	swapchain_format = format.format;
 
 	uint32_t image_count = support.capabilities.minImageCount + 1;
-	if (
-		support.capabilities.maxImageCount > 0 &&
-		image_count > support.capabilities.maxImageCount
-	) {
+	if (	support.capabilities.maxImageCount > 0 &&
+		image_count > support.capabilities.maxImageCount)
+	{
 		image_count = support.capabilities.maxImageCount;
 	}
 
@@ -485,6 +487,7 @@ void VkApp::CreateImageViews() {
 		.setImage(swapchain_images[i])
 		.setViewType(vk::ImageViewType::e2D)
 		.setFormat(swapchain_format);
+
 		view_info.subresourceRange
 			.setAspectMask(vk::ImageAspectFlagBits::eColor)
 			.setBaseMipLevel(0)	// optional
@@ -492,13 +495,17 @@ void VkApp::CreateImageViews() {
 			.setBaseArrayLayer(0)	// optional
 			.setLayerCount(1);
 
-		if (swapchain_imageviews[i])
-			device.destroyImageView(swapchain_imageviews[i]);
-		vk::Result r = device.createImageView(
-			&view_info, nullptr, &swapchain_imageviews[i]
-		);
+		if (swapchain_imageviews[i]) device.destroyImageView(swapchain_imageviews[i]);
+
+		/*auto r = device.createImageView(&view_info, nullptr, &swapchain_imageviews[i]);
 
 		if (r != vk::Result::eSuccess) {
+			throw std::runtime_error("Failed to create image views");
+		}*/
+
+		try {
+			swapchain_imageviews[i] = device.createImageView(view_info);
+		} catch (std::exception e) {
 			throw std::runtime_error("Failed to create image views");
 		}
 	}
@@ -583,8 +590,8 @@ void VkApp::CreateGraphicsPipeline() {
 	vk::PipelineColorBlendAttachmentState color_blend_attachment;
 	color_blend_attachment.setColorWriteMask(
 		vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
-		vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
-	).setBlendEnable(false)
+		vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA )
+	.setBlendEnable(false)
 	.setSrcColorBlendFactor(vk::BlendFactor::eOne)
 	.setDstColorBlendFactor(vk::BlendFactor::eZero)
 	.setColorBlendOp(vk::BlendOp::eAdd)
@@ -629,6 +636,28 @@ void VkApp::CreateGraphicsPipeline() {
 
 	device.destroyShaderModule(fragment_smodule);
 	device.destroyShaderModule(vertex_smodule);
+}
+
+void VkApp::CreateFramebuffers() {
+	swapchain_framebuffers.resize(swapchain_imageviews.size());
+
+	for (size_t i = 0; i < swapchain_imageviews.size(); i++) {
+		vk::ImageView attachments[] = { swapchain_imageviews[i] };
+
+		auto framebuffer_info = vk::FramebufferCreateInfo()
+		.setRenderPass(render_pass)
+		.setAttachmentCount(1)
+		.setPAttachments(attachments)
+		.setWidth(swapchain_extent.width)
+		.setHeight(swapchain_extent.height)
+		.setLayers(1);
+
+		try {
+			swapchain_framebuffers[i] = device.createFramebuffer(framebuffer_info);
+		} catch (std::exception e) {
+			throw std::runtime_error("Failed to create framebuffer");
+		}
+	}
 }
 
 vector<char> VkApp::ReadFile(const string& filename) {

@@ -67,6 +67,8 @@ protected:
 	vk::Extent2D			swapchain_extent;
 	std::vector<vk::Image>		swapchain_images;
 	std::vector<vk::ImageView>	swapchain_imageviews;
+	std::vector<vk::Framebuffer>	swapchain_framebuffers;
+
 	vk::PipelineLayout		pipeline_layout;
 	vk::RenderPass			render_pass;
 	vk::Pipeline			graphics_pipeline;
@@ -109,6 +111,7 @@ protected:
 	void CreateImageViews();
 	void CreateRenderPass();
 	void CreateGraphicsPipeline();
+	void CreateFramebuffers();
 	static std::vector<char> ReadFile(const std::string& filename);
 	void CreateShaderModule(const std::vector<char>& code, vk::ShaderModule&);
 };
