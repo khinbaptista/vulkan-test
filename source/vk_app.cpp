@@ -494,7 +494,7 @@ void VkApp::CreateSwapchain() {
 
 void VkApp::RecreateSwapchain() {
 	device.waitIdle();
-	
+
 	CreateSwapchain();
 	CreateImageViews();
 	//CreateRenderPass();
@@ -792,18 +792,24 @@ void VkApp::CreateCommandBuffers() {
 
 		command_buffers[i].end();
 	}
-
 }
 
 void VkApp::DrawFrame() {
 	uint32_t image_index;
-	device.acquireNextImageKHR(
+	vk::Result r = device.acquireNextImageKHR(
 		swapchain,
 		std::numeric_limits<uint64_t>::max(),
 		semaphore_image_available,
 		VK_NULL_HANDLE,
 		&image_index
 	);
+
+	if (r == vk::Result::eErrorOutOfDateKHR) {
+		RecreateSwapchain();
+		return;
+	} else if (r != vk::Result::eSuccess && r != vk::Result::eSuboptimalKHR) {
+		throw std::runtime_error("Failed to acquire swapchain image");
+	}
 
 	vk::Semaphore wait_semaphores[]   = { semaphore_image_available };
 	vk::Semaphore signal_semaphores[] = { semaphore_render_finished };
@@ -828,7 +834,12 @@ void VkApp::DrawFrame() {
 	.setPSwapchains(swapchains)
 	.setPImageIndices(&image_index);
 
-	presentation_queue.presentKHR(present_info);
+	r = presentation_queue.presentKHR(present_info);
+	if (r == vk::Result::eErrorOutOfDateKHR || r == vk::Result::eSuboptimalKHR) {
+		RecreateSwapchain();
+	} else if (r != vk::Result::eSuccess) {
+		throw std::runtime_error("Failed to present swapchain image");
+	}
 }
 
 void VkApp::CreateSemaphores() {
