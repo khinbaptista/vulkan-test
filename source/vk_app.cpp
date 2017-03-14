@@ -452,7 +452,6 @@ void VkApp::CreateSwapchain() {
 		image_count = support.capabilities.maxImageCount;
 	}
 
-	vk::SwapchainKHR old_swapchain = swapchain;
 	vk::SwapchainCreateInfoKHR swapchain_info;
 	swapchain_info.surface = surface;
 	swapchain_info.minImageCount = image_count;
@@ -478,21 +477,27 @@ void VkApp::CreateSwapchain() {
 	swapchain_info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
 	swapchain_info.presentMode = mode;
 	swapchain_info.clipped = true;
-	swapchain_info.oldSwapchain = old_swapchain;
+
+	vk::SwapchainKHR old_swapchain;
+	if (swapchain) {
+		old_swapchain = swapchain;
+		swapchain_info.oldSwapchain = old_swapchain;
+	}
 
 	vk::SwapchainKHR new_swapchain;
 	new_swapchain = device.createSwapchainKHR(swapchain_info);
 
+	if (old_swapchain) device.destroySwapchainKHR(old_swapchain);
 	swapchain = new_swapchain;
 	swapchain_images = device.getSwapchainImagesKHR(swapchain);
 }
 
 void VkApp::RecreateSwapchain() {
 	device.waitIdle();
-
+	
 	CreateSwapchain();
 	CreateImageViews();
-	CreateRenderPass();
+	//CreateRenderPass();
 	CreateGraphicsPipeline();
 	CreateFramebuffers();
 	CreateCommandBuffers();
@@ -629,6 +634,7 @@ void VkApp::CreateGraphicsPipeline() {
 	.setPushConstantRangeCount(0)
 	.setPPushConstantRanges(nullptr);
 
+	if (pipeline_layout) device.destroyPipelineLayout(pipeline_layout);
 	pipeline_layout = device.createPipelineLayout(layout_info);
 
 	auto pipeline_info = vk::GraphicsPipelineCreateInfo()
