@@ -1,11 +1,9 @@
-//#include "vk_application.hpp"
 #include "vk_app.hpp"
 
 #include <iostream>
 #include <stdexcept>
 
 int main() {
-	//VulkanApp app;
 	VkApp app("Vulkan-HPP");
 
 	try {
@@ -14,6 +12,13 @@ int main() {
 		std::cerr << e.what() << std::endl;
 		return 0;
 	}
+
+	#ifdef _WIN32
+
+		// Don't close the console immediately
+		getchar();
+
+	#endif // _WIN32
 
 	return 0;
 }
