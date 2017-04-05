@@ -5,7 +5,10 @@
 
 #include <vulkan/vulkan.hpp>
 #include <vector>
+#include <array>
 #include <string>
+
+#include <glm/glm.hpp>
 
 struct QueueFamilyIndices {
 	int graphics_family = -1;
@@ -21,10 +24,24 @@ struct SwapChainSupportDetails {
 	std::vector<vk::PresentModeKHR> present_modes;
 };
 
+struct Vertex {
+	glm::vec2 pos;
+	glm::vec3 color;
+
+	static vk::VertexInputBindingDescription GetBindingDescription();
+	static std::array<vk::VertexInputAttributeDescription, 2> GetAttributeDescriptions();
+};
+
 class VkApp {
 public:
 	std::vector<const char*> validationLayers;
 	std::vector<const char*> deviceExtensions;
+
+	const std::vector<Vertex> vertices = {
+		{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+	};
 
 	VkApp(
 		std::string title = "VkApp",
@@ -58,10 +75,10 @@ protected:
 	vk::Instance 			instance;
 	VkDebugReportCallbackEXT	callback;
 
-	vk::PhysicalDevice		physical_device;
-	vk::Device			device;
-	vk::Queue			graphics_queue;
-	vk::Queue			presentation_queue;
+	vk::PhysicalDevice	physical_device;
+	vk::Device		device;
+	vk::Queue		graphics_queue;
+	vk::Queue		presentation_queue;
 
 	vk::SurfaceKHR			surface;
 	vk::SwapchainKHR		swapchain;
@@ -71,15 +88,17 @@ protected:
 	std::vector<vk::ImageView>	swapchain_imageviews;
 	std::vector<vk::Framebuffer>	swapchain_framebuffers;
 
-	vk::PipelineLayout		pipeline_layout;
-	vk::RenderPass			render_pass;
-	vk::Pipeline			graphics_pipeline;
+	vk::PipelineLayout	pipeline_layout;
+	vk::RenderPass		render_pass;
+	vk::Pipeline		graphics_pipeline;
 
 	vk::CommandPool			command_pool;
 	std::vector<vk::CommandBuffer>	command_buffers;
 
-	vk::Semaphore			semaphore_image_available;
-	vk::Semaphore			semaphore_render_finished;
+	vk::Semaphore	semaphore_image_available;
+	vk::Semaphore	semaphore_render_finished;
+
+	vk::Buffer	vertex_buffer;
 
 	void InitVulkan();
 
@@ -129,4 +148,6 @@ protected:
 	void CreateCommandBuffers();
 
 	void CreateSemaphores();
+
+	void CreateVertexBuffer();
 };

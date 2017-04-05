@@ -64,6 +64,8 @@ void VkApp::Cleanup() {
 		instance.getProcAddr("vkDestroyDebugReportCallbackEXT");
 	if (func != nullptr) { func(instance, callback, nullptr); }
 
+	device.destroyBuffer(vertex_buffer);
+
 	device.destroySwapchainKHR(swapchain);
 	instance.destroySurfaceKHR(surface);
 	device.destroyCommandPool(command_pool);
@@ -108,6 +110,7 @@ void VkApp::InitVulkan() {
 	CreateGraphicsPipeline();
 	CreateFramebuffers();
 	CreateCommandPool();
+	CreateVertexBuffer();
 	CreateCommandBuffers();
 	CreateSemaphores();
 }
@@ -561,11 +564,14 @@ void VkApp::CreateGraphicsPipeline() {
 		vert_pipeline_info, frag_pipeline_info
 	};
 
+	auto binding_description = Vertex::GetBindingDescription();
+	auto attribute_descriptions = Vertex::GetAttributeDescriptions();
+
 	auto vert_input_info = vk::PipelineVertexInputStateCreateInfo()
-	.setVertexBindingDescriptionCount(0)
-	.setPVertexBindingDescriptions(nullptr)
-	.setVertexAttributeDescriptionCount(0)
-	.setPVertexAttributeDescriptions(nullptr);
+	.setVertexBindingDescriptionCount(1)
+	.setPVertexBindingDescriptions(&binding_description)
+	.setVertexAttributeDescriptionCount(attribute_descriptions.size())
+	.setPVertexAttributeDescriptions(attribute_descriptions.data());
 
 	auto input_assembly = vk::PipelineInputAssemblyStateCreateInfo()
 	.setTopology(vk::PrimitiveTopology::eTriangleList)
@@ -651,11 +657,11 @@ void VkApp::CreateGraphicsPipeline() {
 	.setLayout(pipeline_layout)
 	.setRenderPass(render_pass)
 	.setSubpass(0)
-	.setBasePipelineHandle(VK_NULL_HANDLE)
+	.setBasePipelineHandle(nullptr)
 	.setBasePipelineIndex(-1);
 
 	if (graphics_pipeline) device.destroyPipeline(graphics_pipeline);
-	graphics_pipeline = device.createGraphicsPipeline(VK_NULL_HANDLE, pipeline_info);
+	graphics_pipeline = device.createGraphicsPipeline(nullptr, pipeline_info);
 
 	device.destroyShaderModule(fragment_smodule);
 	device.destroyShaderModule(vertex_smodule);
@@ -800,7 +806,7 @@ void VkApp::DrawFrame() {
 		swapchain,
 		std::numeric_limits<uint64_t>::max(),
 		semaphore_image_available,
-		VK_NULL_HANDLE,
+		nullptr,
 		&image_index
 	);
 
@@ -824,7 +830,7 @@ void VkApp::DrawFrame() {
 	.setSignalSemaphoreCount(1)
 	.setPSignalSemaphores(signal_semaphores);
 
-	graphics_queue.submit({ submit_info }, VK_NULL_HANDLE);
+	graphics_queue.submit({ submit_info }, nullptr);
 
 	vk::SwapchainKHR swapchains[] = { swapchain };
 	auto present_info = vk::PresentInfoKHR()
@@ -845,4 +851,46 @@ void VkApp::DrawFrame() {
 void VkApp::CreateSemaphores() {
 	semaphore_image_available = device.createSemaphore({});
 	semaphore_render_finished = device.createSemaphore({});
+}
+
+vk::VertexInputBindingDescription Vertex::GetBindingDescription() {
+	auto description = vk::VertexInputBindingDescription()
+	.setBinding(0)
+	.setStride(sizeof(Vertex))
+	.setInputRate(vk::VertexInputRate::eVertex);
+
+	return description;
+}
+
+std::array<vk::VertexInputAttributeDescription, 2>
+Vertex::GetAttributeDescriptions() {
+	std::array<vk::VertexInputAttributeDescription, 2> descriptions = {};
+
+	descriptions[0].setBinding(0)
+	.setLocation(0)
+	.setFormat(vk::Format::eR32G32Sfloat)
+	.setOffset(offsetof(Vertex, pos));
+
+	descriptions[1].setBinding(0)
+	.setLocation(1)
+	.setFormat(vk::Format::eR32G32B32Sfloat)
+	.setOffset(offsetof(Vertex, color));
+
+
+
+	return descriptions;
+}
+
+void VkApp::CreateVertexBuffer() {
+	auto buffer_info = vk::BufferCreateInfo()
+	.setSize(sizeof(vertices[0]) * vertices.size())
+	.setUsage(vk::BufferUsageFlagBits::eVertexBuffer)
+	.setSharingMode(vk::SharingMode::eExclusive);
+
+	vertex_buffer = device.createBuffer(buffer_info);
+
+	vk::MemoryRequirements mem_requirements;
+	mem_requirements = device.getBufferMemoryRequirements(vertex_buffer);
+
+	
 }
