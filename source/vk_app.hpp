@@ -38,9 +38,9 @@ public:
 	std::vector<const char*> deviceExtensions;
 
 	const std::vector<Vertex> vertices = {
-		{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+		{{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}
 	};
 
 	VkApp(
@@ -98,7 +98,8 @@ protected:
 	vk::Semaphore	semaphore_image_available;
 	vk::Semaphore	semaphore_render_finished;
 
-	vk::Buffer	vertex_buffer;
+	vk::Buffer		vertex_buffer;
+	vk::DeviceMemory	vertex_buffer_memory;
 
 	void InitVulkan();
 
@@ -150,4 +151,8 @@ protected:
 	void CreateSemaphores();
 
 	void CreateVertexBuffer();
+	uint32_t FindMemoryType(
+		uint32_t type_filter,
+		vk::MemoryPropertyFlags properties
+	);
 };

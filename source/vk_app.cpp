@@ -65,6 +65,7 @@ void VkApp::Cleanup() {
 	if (func != nullptr) { func(instance, callback, nullptr); }
 
 	device.destroyBuffer(vertex_buffer);
+	device.freeMemory(vertex_buffer_memory);
 
 	device.destroySwapchainKHR(swapchain);
 	instance.destroySurfaceKHR(surface);
@@ -793,7 +794,14 @@ void VkApp::CreateCommandBuffers() {
 
 		command_buffers[i].beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
 		command_buffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline);
-		command_buffers[i].draw(3, 1, 0, 0); // vertex count, instance count, first vertex and first instance
+
+		vk::Buffer vertex_buffers[] = { vertex_buffer };
+		vk::DeviceSize offsets[] = { 0 };
+		command_buffers[i].bindVertexBuffers(0, 1, vertex_buffers, offsets);
+
+		// vertex count, instance count, first vertex and first instance
+		command_buffers[i].draw(vertices.size(), 1, 0, 0);
+
 		command_buffers[i].endRenderPass();
 
 		command_buffers[i].end();
@@ -876,9 +884,23 @@ Vertex::GetAttributeDescriptions() {
 	.setFormat(vk::Format::eR32G32B32Sfloat)
 	.setOffset(offsetof(Vertex, color));
 
-
-
 	return descriptions;
+}
+
+uint32_t VkApp::FindMemoryType(uint32_t filter, vk::MemoryPropertyFlags properties) {
+	vk::PhysicalDeviceMemoryProperties mem_properties;
+	mem_properties = physical_device.getMemoryProperties();
+
+	for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
+		if (filter == (uint32_t)(1 << i) &&
+		(mem_properties.memoryTypes[i].propertyFlags & properties) == properties)
+		{
+			return i;
+		}
+	}
+
+	throw std::runtime_error("Failed to find suitable memory type");
+	return 0;
 }
 
 void VkApp::CreateVertexBuffer() {
@@ -892,5 +914,19 @@ void VkApp::CreateVertexBuffer() {
 	vk::MemoryRequirements mem_requirements;
 	mem_requirements = device.getBufferMemoryRequirements(vertex_buffer);
 
-	
+	auto alloc_info = vk::MemoryAllocateInfo()
+	.setAllocationSize(mem_requirements.size)
+	.setMemoryTypeIndex(
+		FindMemoryType(
+			mem_requirements.memoryTypeBits,
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+	));
+
+	vertex_buffer_memory = device.allocateMemory(alloc_info);
+	device.bindBufferMemory(vertex_buffer, vertex_buffer_memory, 0);
+
+	void* data;
+	data = device.mapMemory(vertex_buffer_memory, 0, buffer_info.size, {});
+	memcpy(data, vertices.data(), (size_t) buffer_info.size);
+	device.unmapMemory(vertex_buffer_memory);
 }
