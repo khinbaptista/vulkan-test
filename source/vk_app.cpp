@@ -892,9 +892,7 @@ uint32_t VkApp::FindMemoryType(uint32_t filter, vk::MemoryPropertyFlags properti
 	mem_properties = physical_device.getMemoryProperties();
 
 	for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
-		if (filter == (uint32_t)(1 << i) &&
-		(mem_properties.memoryTypes[i].propertyFlags & properties) == properties)
-		{
+		if (filter & ((uint32_t)(1 << i)) && ((mem_properties.memoryTypes[i].propertyFlags & properties) == properties)) {
 			return i;
 		}
 	}
