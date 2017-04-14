@@ -2,7 +2,6 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
 #include <vulkan/vulkan.hpp>
 #include <vector>
 #include <array>
@@ -38,7 +37,7 @@ public:
 	std::vector<const char*> deviceExtensions;
 
 	const std::vector<Vertex> vertices = {
-		{{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{ 0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
 		{{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
 		{{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}
 	};
@@ -149,6 +148,13 @@ protected:
 	void CreateCommandBuffers();
 
 	void CreateSemaphores();
+
+	vk::Buffer CreateBuffer(
+		vk::DeviceSize, vk::BufferUsageFlags,
+		vk::MemoryPropertyFlags, vk::DeviceMemory&
+	);
+
+	void CopyBuffer(vk::Buffer source, vk::Buffer destination, vk::DeviceSize size);
 
 	void CreateVertexBuffer();
 	uint32_t FindMemoryType(
