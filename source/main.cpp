@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 int main() {
-	VkApp app("Vulkan-HPP");
+	VkApp app("Vulkan");
 
 	try {
 		app.Run();

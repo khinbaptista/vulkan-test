@@ -8,6 +8,9 @@
 #include <vector>
 #include <set>
 
+#include <thread>
+#include <chrono>
+
 using std::string;
 using std::vector;
 using std::set;
@@ -43,6 +46,7 @@ void VkApp::InitWindow() {
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+	//glfwWindowHint(GLFW_REFRESH_RATE, 60);
 
 	window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 
@@ -51,9 +55,21 @@ void VkApp::InitWindow() {
 }
 
 void VkApp::MainLoop() {
+	using namespace std::chrono_literals;
+
+	auto start = std::chrono::high_resolution_clock::now();
+
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 		DrawFrame();
+
+		auto end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double, std::milli> elapsed = end - start;
+		if (elapsed.count() < 15.0f) {
+			std::this_thread::sleep_for(10ms);
+		}
+
+		start = std::chrono::high_resolution_clock::now();
 	}
 }
 
@@ -63,6 +79,9 @@ void VkApp::Cleanup() {
 	auto func = (PFN_vkDestroyDebugReportCallbackEXT)
 		instance.getProcAddr("vkDestroyDebugReportCallbackEXT");
 	if (func != nullptr) { func(instance, callback, nullptr); }
+
+	device.destroyBuffer(index_buffer);
+	device.freeMemory(index_buffer_memory);
 
 	device.destroyBuffer(vertex_buffer);
 	device.freeMemory(vertex_buffer_memory);
@@ -103,16 +122,21 @@ void VkApp::InitVulkan() {
 	CreateInstance();
 	SetupDebugCallback();
 	CreateSurface();
+
 	PickPhysicalDevice();
 	CreateLogicalDevice();
+
 	CreateSwapchain();
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
 	CreateFramebuffers();
 	CreateCommandPool();
+
 	CreateVertexBuffer();
+	CreateIndexBuffer();
 	CreateCommandBuffers();
+
 	CreateSemaphores();
 }
 
@@ -798,9 +822,11 @@ void VkApp::CreateCommandBuffers() {
 		vk::Buffer vertex_buffers[] = { vertex_buffer };
 		vk::DeviceSize offsets[] = { 0 };
 		command_buffers[i].bindVertexBuffers(0, 1, vertex_buffers, offsets);
+		command_buffers[i].bindIndexBuffer(index_buffer, 0, vk::IndexType::eUint16);
 
 		// vertex count, instance count, first vertex and first instance
-		command_buffers[i].draw(vertices.size(), 1, 0, 0);
+		//command_buffers[i].draw(vertices.size(), 1, 0, 0);
+		command_buffers[i].drawIndexed(indices.size(), 1, 0, 0, 0);
 
 		command_buffers[i].endRenderPass();
 
@@ -954,6 +980,38 @@ void VkApp::CreateVertexBuffer() {
 	);
 
 	CopyBuffer(staging_buffer, vertex_buffer, buffer_size);
+
+	device.destroyBuffer(staging_buffer);
+	device.freeMemory(staging_buffer_memory);
+}
+
+void VkApp::CreateIndexBuffer() {
+	vk::DeviceSize buffer_size = sizeof(indices[0]) * indices.size();
+
+	vk::Buffer staging_buffer;
+	vk::DeviceMemory staging_buffer_memory;
+	staging_buffer = CreateBuffer(
+		buffer_size,
+		vk::BufferUsageFlagBits::eTransferSrc,
+		vk::MemoryPropertyFlagBits::eHostVisible |
+		vk::MemoryPropertyFlagBits::eHostCoherent,
+		staging_buffer_memory
+	);
+
+	void* data;
+	data = device.mapMemory(staging_buffer_memory, 0, buffer_size, {});
+	memcpy(data, indices.data(), (size_t) buffer_size);
+	device.unmapMemory(staging_buffer_memory);
+
+	index_buffer = CreateBuffer(
+		buffer_size,
+		vk::BufferUsageFlagBits::eTransferDst |
+		vk::BufferUsageFlagBits::eIndexBuffer,
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		index_buffer_memory
+	);
+
+	CopyBuffer(staging_buffer, index_buffer, buffer_size);
 
 	device.destroyBuffer(staging_buffer);
 	device.freeMemory(staging_buffer_memory);

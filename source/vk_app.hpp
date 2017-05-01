@@ -37,10 +37,13 @@ public:
 	std::vector<const char*> deviceExtensions;
 
 	const std::vector<Vertex> vertices = {
-		{{ 0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-		{{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}
+		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{ 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{ 0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}},
+		{{-0.5f,  0.5f}, {1.0f, 1.0f, 1.0f}}
 	};
+
+	const std::vector<uint16_t> indices = { 0, 1, 2, 2, 3, 0 };
 
 	VkApp(
 		std::string title = "VkApp",
@@ -71,34 +74,36 @@ protected:
 	// ##############################
 	// Vulkan stuff
 
-	vk::Instance 			instance;
+	vk::Instance 				instance;
 	VkDebugReportCallbackEXT	callback;
 
 	vk::PhysicalDevice	physical_device;
-	vk::Device		device;
-	vk::Queue		graphics_queue;
-	vk::Queue		presentation_queue;
+	vk::Device			device;
+	vk::Queue			graphics_queue;
+	vk::Queue			presentation_queue;
 
 	vk::SurfaceKHR			surface;
 	vk::SwapchainKHR		swapchain;
-	vk::Format			swapchain_format;
+	vk::Format				swapchain_format;
 	vk::Extent2D			swapchain_extent;
-	std::vector<vk::Image>		swapchain_images;
-	std::vector<vk::ImageView>	swapchain_imageviews;
+	std::vector<vk::Image>			swapchain_images;
+	std::vector<vk::ImageView>		swapchain_imageviews;
 	std::vector<vk::Framebuffer>	swapchain_framebuffers;
 
 	vk::PipelineLayout	pipeline_layout;
 	vk::RenderPass		render_pass;
 	vk::Pipeline		graphics_pipeline;
 
-	vk::CommandPool			command_pool;
+	vk::CommandPool					command_pool;
 	std::vector<vk::CommandBuffer>	command_buffers;
 
 	vk::Semaphore	semaphore_image_available;
 	vk::Semaphore	semaphore_render_finished;
 
-	vk::Buffer		vertex_buffer;
+	vk::Buffer			vertex_buffer;
 	vk::DeviceMemory	vertex_buffer_memory;
+	vk::Buffer			index_buffer;
+	vk::DeviceMemory	index_buffer_memory;
 
 	void InitVulkan();
 
@@ -157,6 +162,7 @@ protected:
 	void CopyBuffer(vk::Buffer source, vk::Buffer destination, vk::DeviceSize size);
 
 	void CreateVertexBuffer();
+	void CreateIndexBuffer();
 	uint32_t FindMemoryType(
 		uint32_t type_filter,
 		vk::MemoryPropertyFlags properties
