@@ -114,11 +114,14 @@ protected:
 	vk::Buffer			index_buffer;
 	vk::DeviceMemory	index_buffer_memory;
 
-	vk::DescriptorSetLayout descriptor_set_layout;
 	vk::Buffer			uniform_staging_buffer;
 	vk::DeviceMemory	uniform_staging_buffer_memory;
 	vk::Buffer			uniform_buffer;
 	vk::DeviceMemory	uniform_buffer_memory;
+
+	vk::DescriptorSetLayout descriptor_set_layout;
+	vk::DescriptorPool		descriptor_pool;
+	vk::DescriptorSet		descriptor_set;
 
 	void InitVulkan();
 
@@ -183,7 +186,10 @@ protected:
 		vk::MemoryPropertyFlags properties
 	);
 
-	void CreateDescriptorSetLayout();
 	void CreateUniformBuffer();
 	void UpdateUniformBuffer();
+
+	void CreateDescriptorSetLayout();
+	void CreateDescriptorPool();
+	void CreateDescriptorSet();
 };

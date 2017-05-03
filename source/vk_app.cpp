@@ -82,6 +82,8 @@ void VkApp::Cleanup() {
 		instance.getProcAddr("vkDestroyDebugReportCallbackEXT");
 	if (func != nullptr) { func(instance, callback, nullptr); }
 
+	device.destroyDescriptorPool(descriptor_pool);
+
 	device.destroyBuffer(uniform_staging_buffer);
 	device.freeMemory(uniform_staging_buffer_memory);
 
@@ -147,6 +149,8 @@ void VkApp::InitVulkan() {
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateUniformBuffer();
+	CreateDescriptorPool();
+	CreateDescriptorSet();
 	CreateCommandBuffers();
 
 	CreateSemaphores();
@@ -638,7 +642,7 @@ void VkApp::CreateGraphicsPipeline() {
 	.setPolygonMode(vk::PolygonMode::eFill)
 	.setLineWidth(1.0f)
 	.setCullMode(vk::CullModeFlagBits::eBack)
-	.setFrontFace(vk::FrontFace::eClockwise)
+	.setFrontFace(vk::FrontFace::eCounterClockwise)
 	.setDepthBiasEnable(false)
 	.setDepthBiasConstantFactor(0.0f)
 	.setDepthBiasClamp(0.0f)
@@ -836,6 +840,14 @@ void VkApp::CreateCommandBuffers() {
 		vk::DeviceSize offsets[] = { 0 };
 		command_buffers[i].bindVertexBuffers(0, 1, vertex_buffers, offsets);
 		command_buffers[i].bindIndexBuffer(index_buffer, 0, vk::IndexType::eUint16);
+
+		command_buffers[i].bindDescriptorSets(
+			vk::PipelineBindPoint::eGraphics,
+			pipeline_layout,
+			0,
+			{ descriptor_set },
+			{}
+		);
 
 		// vertex count, instance count, first vertex and first instance
 		//command_buffers[i].draw(vertices.size(), 1, 0, 0);
@@ -1123,4 +1135,42 @@ void VkApp::UpdateUniformBuffer() {
 	device.unmapMemory(uniform_staging_buffer_memory);
 
 	CopyBuffer(uniform_staging_buffer, uniform_buffer, sizeof(ubo));
+}
+
+void VkApp::CreateDescriptorPool() {
+	auto pool_size = vk::DescriptorPoolSize()
+	.setType(vk::DescriptorType::eUniformBuffer)
+	.setDescriptorCount(1);
+
+	auto pool_info = vk::DescriptorPoolCreateInfo()
+	.setPoolSizeCount(1)
+	.setPPoolSizes(&pool_size)
+	.setMaxSets(1);
+	descriptor_pool = device.createDescriptorPool(pool_info);
+}
+
+void VkApp::CreateDescriptorSet() {
+	vk::DescriptorSetLayout layouts[] = { descriptor_set_layout };
+
+	auto alloc_info = vk::DescriptorSetAllocateInfo()
+	.setDescriptorPool(descriptor_pool)
+	.setDescriptorSetCount(1)
+	.setPSetLayouts(layouts);
+	descriptor_set = device.allocateDescriptorSets(alloc_info)[0];
+
+	auto buffer_info = vk::DescriptorBufferInfo()
+	.setBuffer(uniform_buffer)
+	.setOffset(0)
+	.setRange(sizeof(UniformBufferObject));
+
+	auto descriptor_write = vk::WriteDescriptorSet()
+	.setDstSet(descriptor_set)
+	.setDstBinding(0)
+	.setDstArrayElement(0)
+	.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+	.setDescriptorCount(1)
+	.setPBufferInfo(&buffer_info)
+	.setPImageInfo(nullptr)
+	.setPTexelBufferView(nullptr);
+	device.updateDescriptorSets({ descriptor_write }, {});
 }
