@@ -61,6 +61,8 @@ void VkApp::MainLoop() {
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
+
+		UpdateUniformBuffer();
 		DrawFrame();
 
 		auto end = std::chrono::high_resolution_clock::now();
@@ -79,6 +81,12 @@ void VkApp::Cleanup() {
 	auto func = (PFN_vkDestroyDebugReportCallbackEXT)
 		instance.getProcAddr("vkDestroyDebugReportCallbackEXT");
 	if (func != nullptr) { func(instance, callback, nullptr); }
+
+	device.destroyBuffer(uniform_staging_buffer);
+	device.freeMemory(uniform_staging_buffer_memory);
+
+	device.destroyBuffer(uniform_buffer);
+	device.freeMemory(uniform_buffer_memory);
 
 	device.destroyBuffer(index_buffer);
 	device.freeMemory(index_buffer_memory);
@@ -105,6 +113,8 @@ void VkApp::Cleanup() {
 	device.destroySemaphore(semaphore_render_finished);
 	device.destroySemaphore(semaphore_image_available);
 
+	device.destroyDescriptorSetLayout(descriptor_set_layout);
+
 	device.destroyPipelineLayout(pipeline_layout);
 	device.destroyRenderPass(render_pass);
 	device.destroyPipeline(graphics_pipeline);
@@ -129,12 +139,14 @@ void VkApp::InitVulkan() {
 	CreateSwapchain();
 	CreateImageViews();
 	CreateRenderPass();
+	CreateDescriptorSetLayout();
 	CreateGraphicsPipeline();
 	CreateFramebuffers();
 	CreateCommandPool();
 
 	CreateVertexBuffer();
 	CreateIndexBuffer();
+	CreateUniformBuffer();
 	CreateCommandBuffers();
 
 	CreateSemaphores();
@@ -659,9 +671,10 @@ void VkApp::CreateGraphicsPipeline() {
 	.setPAttachments(&color_blend_attachment)
 	.setBlendConstants({ 0.0f, 0.0f, 0.0f, 0.0f });
 
+	vk::DescriptorSetLayout layouts[] = { descriptor_set_layout };
 	auto layout_info = vk::PipelineLayoutCreateInfo()
-	.setSetLayoutCount(0)
-	.setPSetLayouts(nullptr)
+	.setSetLayoutCount(1)
+	.setPSetLayouts(layouts)
 	.setPushConstantRangeCount(0)
 	.setPPushConstantRanges(nullptr);
 
@@ -1044,4 +1057,70 @@ void VkApp::CopyBuffer(vk::Buffer source, vk::Buffer destination, vk::DeviceSize
 	graphics_queue.waitIdle();
 
 	device.freeCommandBuffers(command_pool, { command_buffer });
+}
+
+void VkApp::CreateDescriptorSetLayout() {
+	auto ubo_layout_binding = vk::DescriptorSetLayoutBinding()
+	.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+	.setDescriptorCount(1)
+	.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+	.setPImmutableSamplers(nullptr);
+
+	auto layout_info = vk::DescriptorSetLayoutCreateInfo()
+	.setBindingCount(1)
+	.setPBindings(&ubo_layout_binding);
+	descriptor_set_layout = device.createDescriptorSetLayout(layout_info);
+}
+
+void VkApp::CreateUniformBuffer() {
+	vk::DeviceSize buffer_size = sizeof(UniformBufferObject);
+
+	uniform_staging_buffer = CreateBuffer(
+		buffer_size,
+		vk::BufferUsageFlagBits::eTransferSrc,
+		vk::MemoryPropertyFlagBits::eHostVisible
+		| vk::MemoryPropertyFlagBits::eHostCoherent,
+		uniform_staging_buffer_memory
+	);
+
+	uniform_buffer = CreateBuffer(
+		buffer_size,
+		vk::BufferUsageFlagBits::eTransferDst
+		| vk::BufferUsageFlagBits::eUniformBuffer,
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		uniform_buffer_memory
+	);
+}
+
+void VkApp::UpdateUniformBuffer() {
+	static auto start_time = std::chrono::high_resolution_clock::now();
+
+	auto current_time = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count() / 1000.0f;
+
+	UniformBufferObject ubo = {};
+	ubo.model = glm::rotate(
+		glm::mat4(),
+		time * glm::radians(90.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f)
+	);
+	ubo.view = glm::lookAt(
+		glm::vec3(2.0f, 2.0f, 2.0f),	// eye
+		glm::vec3(0.0f, 0.0f, 0.0f),	// target
+		glm::vec3(0.0f, 0.0f, 1.0f)		// up
+	);
+	ubo.proj = glm::perspective(
+		glm::radians(45.0f),	// vertical field-of-view
+		swapchain_extent.width / (float) swapchain_extent.height,	// aspect ratio
+		0.1f,		// near
+		10.0f		// far
+	);
+	ubo.proj[1][1] *= -1.0f;
+
+	void* data;
+	data = device.mapMemory(uniform_staging_buffer_memory, 0, sizeof(ubo), {});
+	memcpy(data, &ubo, sizeof(ubo));
+	device.unmapMemory(uniform_staging_buffer_memory);
+
+	CopyBuffer(uniform_staging_buffer, uniform_buffer, sizeof(ubo));
 }

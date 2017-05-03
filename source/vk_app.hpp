@@ -3,11 +3,14 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.hpp>
+
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <vector>
 #include <array>
 #include <string>
-
-#include <glm/glm.hpp>
 
 struct QueueFamilyIndices {
 	int graphics_family = -1;
@@ -29,6 +32,12 @@ struct Vertex {
 
 	static vk::VertexInputBindingDescription GetBindingDescription();
 	static std::array<vk::VertexInputAttributeDescription, 2> GetAttributeDescriptions();
+};
+
+struct UniformBufferObject {
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
 };
 
 class VkApp {
@@ -105,6 +114,12 @@ protected:
 	vk::Buffer			index_buffer;
 	vk::DeviceMemory	index_buffer_memory;
 
+	vk::DescriptorSetLayout descriptor_set_layout;
+	vk::Buffer			uniform_staging_buffer;
+	vk::DeviceMemory	uniform_staging_buffer_memory;
+	vk::Buffer			uniform_buffer;
+	vk::DeviceMemory	uniform_buffer_memory;
+
 	void InitVulkan();
 
 	void CreateInstance();
@@ -167,4 +182,8 @@ protected:
 		uint32_t type_filter,
 		vk::MemoryPropertyFlags properties
 	);
+
+	void CreateDescriptorSetLayout();
+	void CreateUniformBuffer();
+	void UpdateUniformBuffer();
 };
