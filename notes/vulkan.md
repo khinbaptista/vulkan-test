@@ -39,6 +39,7 @@ to change any given setting, you are not able to do so by just calling a functio
 or setting a member: you need to recreate the pipeline object;
 Some pipeline stages can be disabled for performance (eg, disable fragment shader
 stage for shadow map generation).
+The graphics pipeline object will be required in a per-material basis.
 
 - Shader modules
 	- Compiling shaders
@@ -63,4 +64,31 @@ stage for shadow map generation).
 	- Specifies how many color and depth buffers there will be, how many samples
 	to use for each of them and how their contents should be handled
 	- Attachment description
-	- Subpasses
+	- Subpasses: A render pass can consist of multiple subpasses which are
+	subsequent rendering operations that depend on the contents of framebuffers
+	in previous passes (e.g., a sequence of post-processing effects).
+	- Attachment references: used by subpasses to access the attachments.
+
+#### Drawing
+- **Framebuffer:**
+The attachments specified during render pass creation are bound by wrapping them
+into a `vk::Framebuffer` object, which references all of the `vk::ImageView`
+objects that represent the attachments.
+- **Command buffers:**
+Commands like drawing operations and memory transfers are not executed directly
+using function calls - all the operation are recorded in command buffer objects.
+This allows for the setting up of drawing commands in advance and in multiple
+threads, and just telling Vulkan to execute them in the main loop.
+	- Command pools: memory management based on usage.
+	- Command buffer allocation
+	- Command buffer recording, starting the render pass and drawing commands
+- Rendering and presentation
+	- Synchronization: semaphores and fences
+	- Acquiring an image from the swapchain
+	- Submitting the command buffer
+	- Subpass dependencies
+	- Presentation: finally, the image is rendered to screen.
+	- Memory leak
+
+There's more yet to go: vertex buffers, uniform buffers, texture mapping
+and depth buffering, but this is enough to go on this week.
