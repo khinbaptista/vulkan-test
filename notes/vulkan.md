@@ -89,6 +89,42 @@ threads, and just telling Vulkan to execute them in the main loop.
 	- Subpass dependencies
 	- Presentation: finally, the image is rendered to screen.
 	- Memory leak
+- Swapchain recreation (window resize or suboptimal state)
 
-There's more yet to go: vertex buffers, uniform buffers, texture mapping
-and depth buffering, but this is enough to go on this week.
+#### Vertex buffers
+- Modifying the vertex shader
+- Describing the vertex data (GLM)
+	- "Interleaving vertex attributes": single struct with all required vertex
+	data: position,	color, UV coordinates, etc
+	- Binding descriptions
+		- `vk::VertexInputBindingDescription`
+			- Describes at which rate to load data from memory, number of bytes
+			between data entries (stride) and whether to move to the next data
+			entry after each vertex or after each instance
+			- Because of the interleaving of attributes, only one binding used
+		- `vk::VertexInputAttributeDescription`
+			- Describes how to extract a vertex attribute from a chunk of vertex
+			data originating from a binding description
+			- Binding, location (from the shader code), format, offset
+	- Modify vertex input info to use the given descriptions
+- Vertex buffer creation
+	- Buffers are used to store arbitrary data which can be read by the GPU
+	- Memory management is a task for the application
+	- Memory requirements: find suitable memory type for the desired usage;
+	each type of memory can vary allowed operations and performance characteristics
+	- Allocate memory with the desired requirements
+	- Bind buffer memory
+	- Fill the vertex buffer
+		- Vertex memory is mapped into CPU accessible memory
+		- Copy data into mapped memory
+		- Unmap the memory
+		- Because of caching, the GPU memory may not immediately reflect the
+		changed made to the mapped memory; use memory with the HOST_COFERENT
+		property or use fuctions to flush cached memory
+		- Bind the vertex buffer in the rendering operations
+- Staging buffer
+	- Using a staging buffer to copy vertex data to a vertex buffer results in
+	better performance, but takes more work. The type of memory used to write
+	data using the CPU is not optimal for the GPU to read.
+	- The most optimal memory type has the `vk::MemoryPropertyFlagBits::eDeviceLocal`
+	property set
