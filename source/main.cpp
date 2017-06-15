@@ -1,10 +1,12 @@
-#include "vk_app.hpp"
+//#include "vk_app.hpp"
+//#include "vulkan_application.hpp"
 
 #include <iostream>
 #include <stdexcept>
 
 int main() {
-	VkApp app("Vulkan");
+	/*VkApp app("Vulkan");
+	VkApplication app;
 
 	try {
 		app.Run();
@@ -18,7 +20,7 @@ int main() {
 		// Don't close the console immediately
 		getchar();
 
-	#endif // _WIN32
+	#endif // _WIN32*/
 
 	return 0;
 }

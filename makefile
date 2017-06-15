@@ -10,7 +10,7 @@ LINKER	= g++
 CGLSL	= glslangValidator
 
 CFLAGS	= -Wall -std=c++14
-LDFLAGS	= -lvulkan -L$(VULKAN_SDK)/lib
+LDFLAGS	= -lvulkan
 GLFLAGS = -V
 
 DEBUG = 1
@@ -32,7 +32,7 @@ ObjectsPath = source/objects
 ShadersPath = shaders
 
 # Source files names
-SourceFiles = main.cpp vk_app.cpp
+SourceFiles = main.cpp window.cpp application.cpp
 
 # Shader source files (GLSL)
 ShaderFiles = vertex.vert fragment.frag

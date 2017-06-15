@@ -128,3 +128,5 @@ threads, and just telling Vulkan to execute them in the main loop.
 	data using the CPU is not optimal for the GPU to read.
 	- The most optimal memory type has the `vk::MemoryPropertyFlagBits::eDeviceLocal`
 	property set
+- Index buffer
+	- Reuse vertex data multiple times instead of repeating it
