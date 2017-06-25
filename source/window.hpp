@@ -2,6 +2,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <vulkan/vulkan.hpp>
 #include <string>
 #include <array>
 
@@ -26,9 +27,9 @@ public:
 	std::string title();
 	uint32_t width();
 	uint32_t height();
-	std::array<uint32_t, 2> size();
+	GLFWwindow* glfw();
 
-	inline operator GLFWwindow*() { return _window; }
+	VkResult CreateSurface(const vk::Instance&, vk::SurfaceKHR*);
 
 	bool should_close();
 };

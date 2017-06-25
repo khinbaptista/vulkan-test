@@ -22,5 +22,10 @@ void Window::Initialize() {
 string		Window::title()		{ return _title;	}
 uint32_t	Window::width()		{ return _width;	}
 uint32_t	Window::height()	{ return _height;	}
+GLFWwindow*	Window::glfw()		{ return _window;	}
+
+VkResult Window::CreateSurface(const vk::Instance &instance, vk::SurfaceKHR *surface) {
+	return glfwCreateWindowSurface(instance, _window, nullptr, reinterpret_cast<VkSurfaceKHR_T**>(surface));
+}
 
 bool Window::should_close() { return glfwWindowShouldClose(_window); }

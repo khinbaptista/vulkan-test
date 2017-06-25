@@ -11,12 +11,11 @@
 #include "window.hpp"
 
 struct QueueFamilyIndices {
-	int graphics = -1;
+	int graphics	= -1;
+	int present		= -1;
 
 	bool is_complete();
 };
-
-QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice);
 
 class Application {
 public:
@@ -51,17 +50,24 @@ protected:
 
 	Window *window;
 
-	vk::Instance instance;
+	vk::Instance	instance;
+	vk::SurfaceKHR	surface;
+
 	vk::DebugReportCallbackEXT callback;
 	vk::PhysicalDevice physical_device;
 
 	vk::Device	device;
 	vk::Queue	graphics_queue;
+	vk::Queue	present_queue;
 
 	void InitializeVulkan();
 	void MainLoop();
 
+	QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice);
+	bool is_device_suitable(vk::PhysicalDevice);
+
 	void CreateVulkanInstance();
 	void PickPhysicalDevice();
 	void CreateLogicalDevice();
+	void CreateSurface();
 };

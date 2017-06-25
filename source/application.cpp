@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstring>
 #include <stdexcept>
+#include <set>
 
 using std::cout;
 using std::cerr;
@@ -12,6 +13,7 @@ using std::runtime_error;
 
 using std::string;
 using std::vector;
+using std::set;
 
 Application::Application(string title, bool validate) {
 	window = new Window(title);
@@ -31,7 +33,8 @@ Application::~Application() {
 	// Destroy logical device
 	device.destroy();
 
-	// Destroy vulkan instance
+	// Destroy window surface and vulkan instance
+	instance.destroySurfaceKHR(surface);
 	instance.destroy();
 
 	// Destroy window and terminate GLFW
@@ -50,6 +53,7 @@ void Application::Run() {
 
 void Application::InitializeVulkan() {
 	CreateVulkanInstance();
+	CreateSurface();
 	SetupDebugCallback();
 	PickPhysicalDevice();
 	CreateLogicalDevice();
@@ -127,6 +131,13 @@ vector<const char*> Application::GetRequiredExtensions() {
 	return extensions;
 }
 
+void Application::CreateSurface() {
+	//if (glfwCreateWindowSurface(instance, window->glfw(), nullptr, &surface) != VK_SUCCESS) {
+	if (window->CreateSurface(instance, &surface) != VK_SUCCESS) {
+		throw runtime_error("Failed to create window surface");
+	}
+}
+
 VkBool32 Application::DebugCallback(
     VkDebugReportFlagsEXT flags,
     VkDebugReportObjectTypeEXT objType,
@@ -144,6 +155,7 @@ VkBool32 Application::DebugCallback(
 
 void Application::SetupDebugCallback() {
 	if (!enable_validation_layers) return;
+
 	auto callback_info = vk::DebugReportCallbackCreateInfoEXT()
 	.setFlags(vk::DebugReportFlagBitsEXT::eError | vk::DebugReportFlagBitsEXT::eWarning)
 	.setPfnCallback(DebugCallback);
@@ -166,7 +178,7 @@ void Application::SetupDebugCallback() {
 	}
 }
 
-bool _is_device_suitable(vk::PhysicalDevice device) {
+bool Application::is_device_suitable(vk::PhysicalDevice device) {
 	QueueFamilyIndices indices = FindQueueFamilies(device);
 	return indices.is_complete();
 }
@@ -180,7 +192,7 @@ void Application::PickPhysicalDevice() {
 	}
 
 	for (const auto& device : devices) {
-		if (_is_device_suitable(device)) {
+		if (is_device_suitable(device)) {
 			physical_device = device;
 			break;
 		}
@@ -192,10 +204,10 @@ void Application::PickPhysicalDevice() {
 }
 
 bool QueueFamilyIndices::is_complete() {
-	return graphics >= 0;
+	return graphics >= 0 && present >= 0;
 }
 
-QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice device) {
+QueueFamilyIndices Application::FindQueueFamilies(vk::PhysicalDevice device) {
 	QueueFamilyIndices indices;
 	vector<vk::QueueFamilyProperties> families;
 	families = device.getQueueFamilyProperties();
@@ -209,6 +221,13 @@ QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice device) {
 			indices.graphics = i;
 		}
 
+		if (
+			device.getSurfaceSupportKHR(i, surface) &&
+			family.queueCount > 0
+		) {
+			indices.present = i;
+		}
+
 		if (indices.is_complete()) { break; }
 
 		i++;
@@ -218,19 +237,27 @@ QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice device) {
 }
 
 void Application::CreateLogicalDevice() {
-	float queue_priority = 1.0f;
 	QueueFamilyIndices indices = FindQueueFamilies(physical_device);
 
-	auto queue_info = vk::DeviceQueueCreateInfo()
-	.setQueueFamilyIndex(indices.graphics)
-	.setQueueCount(1)
-	.setPQueuePriorities(&queue_priority);
+	vector<vk::DeviceQueueCreateInfo> queue_infos;
+	set<int> unique_queue_families = {
+		indices.graphics, indices.present
+	};
+
+	float queue_priority = 1.0f;
+	for (int family : unique_queue_families) {
+		auto queue_info = vk::DeviceQueueCreateInfo()
+		.setQueueFamilyIndex(family)
+		.setQueueCount(1)
+		.setPQueuePriorities(&queue_priority);
+		queue_infos.push_back(queue_info);
+	}
 
 	auto device_features = vk::PhysicalDeviceFeatures();	// TODO
 
 	auto device_info = vk::DeviceCreateInfo()
-	.setPQueueCreateInfos(&queue_info)
-	.setQueueCreateInfoCount(1)
+	.setQueueCreateInfoCount(static_cast<uint32_t>(queue_infos.size()))
+	.setPQueueCreateInfos(queue_infos.data())
 	.setPEnabledFeatures(&device_features)
 	.setEnabledExtensionCount(0);
 
@@ -241,6 +268,7 @@ void Application::CreateLogicalDevice() {
 		device_info.setEnabledLayerCount(0);
 	}
 
-	device = physical_device.createDevice(device_info);
-	graphics_queue = device.getQueue(indices.graphics, 0);
+	device			= physical_device.createDevice(device_info);
+	graphics_queue	= device.getQueue(indices.graphics, 0);
+	present_queue	= device.getQueue(indices.present, 0);
 }
