@@ -8,6 +8,8 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
+using std::runtime_error;
+
 using std::string;
 using std::vector;
 
@@ -25,6 +27,9 @@ Application::~Application() {
 			destroy_callback_func(instance, callback, nullptr);
 		}
 	}
+
+	// Destroy logical device
+	device.destroy();
 
 	// Destroy vulkan instance
 	instance.destroy();
@@ -46,6 +51,8 @@ void Application::Run() {
 void Application::InitializeVulkan() {
 	CreateVulkanInstance();
 	SetupDebugCallback();
+	PickPhysicalDevice();
+	CreateLogicalDevice();
 }
 
 void Application::MainLoop() {
@@ -56,7 +63,7 @@ void Application::MainLoop() {
 
 void Application::CreateVulkanInstance() {
 	if (enable_validation_layers && !CheckValidationLayerSupport()) {
-		throw std::runtime_error("Validation layers not available");
+		throw runtime_error("Validation layers not available");
 	}
 
 	auto app_info = vk::ApplicationInfo()
@@ -155,6 +162,85 @@ void Application::SetupDebugCallback() {
 	}
 
 	if (result != VK_SUCCESS) {
-		throw std::runtime_error("Failed to setup debug callback");
+		throw runtime_error("Failed to setup debug callback");
 	}
+}
+
+bool _is_device_suitable(vk::PhysicalDevice device) {
+	QueueFamilyIndices indices = FindQueueFamilies(device);
+	return indices.is_complete();
+}
+
+void Application::PickPhysicalDevice() {
+	vector<vk::PhysicalDevice> devices;
+	devices = instance.enumeratePhysicalDevices();
+
+	if (devices.size() == 0) {
+		throw runtime_error("Filed to find GPUs with Vulkan support");
+	}
+
+	for (const auto& device : devices) {
+		if (_is_device_suitable(device)) {
+			physical_device = device;
+			break;
+		}
+	}
+
+	if (!physical_device) {
+		throw runtime_error("Failed to find a suitable GPU");
+	}
+}
+
+bool QueueFamilyIndices::is_complete() {
+	return graphics >= 0;
+}
+
+QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice device) {
+	QueueFamilyIndices indices;
+	vector<vk::QueueFamilyProperties> families;
+	families = device.getQueueFamilyProperties();
+
+	int i = 0;
+	for (const auto& family : families) {
+		if (
+			family.queueCount > 0 &&
+			family.queueFlags & vk::QueueFlagBits::eGraphics
+		) {
+			indices.graphics = i;
+		}
+
+		if (indices.is_complete()) { break; }
+
+		i++;
+	}
+
+	return indices;
+}
+
+void Application::CreateLogicalDevice() {
+	float queue_priority = 1.0f;
+	QueueFamilyIndices indices = FindQueueFamilies(physical_device);
+
+	auto queue_info = vk::DeviceQueueCreateInfo()
+	.setQueueFamilyIndex(indices.graphics)
+	.setQueueCount(1)
+	.setPQueuePriorities(&queue_priority);
+
+	auto device_features = vk::PhysicalDeviceFeatures();	// TODO
+
+	auto device_info = vk::DeviceCreateInfo()
+	.setPQueueCreateInfos(&queue_info)
+	.setQueueCreateInfoCount(1)
+	.setPEnabledFeatures(&device_features)
+	.setEnabledExtensionCount(0);
+
+	if (enable_validation_layers) {
+		device_info.setEnabledLayerCount(static_cast<uint32_t>(validation_layers.size()));
+		device_info.setPpEnabledLayerNames(validation_layers.data());
+	} else {
+		device_info.setEnabledLayerCount(0);
+	}
+
+	device = physical_device.createDevice(device_info);
+	graphics_queue = device.getQueue(indices.graphics, 0);
 }

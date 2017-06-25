@@ -10,6 +10,14 @@
 #include "vkref.hpp"
 #include "window.hpp"
 
+struct QueueFamilyIndices {
+	int graphics = -1;
+
+	bool is_complete();
+};
+
+QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice);
+
 class Application {
 public:
 	Application(
@@ -42,11 +50,18 @@ protected:
 	);
 
 	Window *window;
+
 	vk::Instance instance;
 	vk::DebugReportCallbackEXT callback;
+	vk::PhysicalDevice physical_device;
+
+	vk::Device	device;
+	vk::Queue	graphics_queue;
 
 	void InitializeVulkan();
 	void MainLoop();
 
 	void CreateVulkanInstance();
+	void PickPhysicalDevice();
+	void CreateLogicalDevice();
 };

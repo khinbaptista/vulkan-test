@@ -35,7 +35,7 @@ ShadersPath = shaders
 SourceFiles = main.cpp window.cpp application.cpp
 
 # Shader source files (GLSL)
-ShaderFiles = vertex.vert fragment.frag
+ShaderFiles = #shader.vert shader.frag
 
 ##################################################
 
@@ -50,7 +50,7 @@ FRAG = $(filter %.frag, $(GLSL))
 SPIRV  = $(patsubst $(SourcePath)/%.vert, $(ShadersPath)/%-v.spv, $(VERT))
 SPIRV += $(patsubst $(SourcePath)/%.frag, $(ShadersPath)/%-f.spv, $(FRAG))
 
-CFLAGS +=  `pkg-config --cflags $(Packages)`
+CFLAGS = `pkg-config --cflags $(Packages)`
 LDFLAGS += `pkg-config --static --libs $(Packages)`
 
 ifeq ($(DEBUG), 0)
@@ -81,7 +81,7 @@ $(ObjectsPath)/%.o: $(SourcePath)/%.cpp
 	$(CC) -MMD -c -o $@ $< $(CFLAGS)
 
 clean:
-	rm -f $(ObjectsPath)/*.* $(Project) *.spv
+	rm -f $(ObjectsPath)/* $(Project) $(ShadersPath)/*.spv
 	rmdir $(ObjectsPath)
 
 ##################################################
