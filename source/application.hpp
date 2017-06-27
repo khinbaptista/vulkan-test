@@ -29,11 +29,12 @@ public:
 	void Run();
 
 protected:
+	const std::vector<const char*> validation_layers = { "VK_LAYER_LUNARG_standard_validation" };
+	const std::vector<const char*> device_extensions = { "VK_KHR_Swapchain" };
+
 	bool enable_validation_layers;
-	const std::vector<const char*> validation_layers = {
-		"VK_LAYER_LUNARG_standard_validation"
-	};
 	bool CheckValidationLayerSupport();
+	bool CheckDeviceExtensionSupport(vk::PhysicalDevice);
 	std::vector<const char*> GetRequiredExtensions();
 
 	void SetupDebugCallback();

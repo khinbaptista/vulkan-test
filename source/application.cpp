@@ -113,6 +113,19 @@ bool Application::CheckValidationLayerSupport() {
 	return true;
 }
 
+bool Application::CheckDeviceExtensionSupport(vk::PhysicalDevice device) {
+	vector<vk::ExtensionProperties> available_extensions;
+	available_extensions = device.enumerateExtensionProperties();
+	
+	set<string> required_extensions(device_extensions.begin(), device_extensions.end());
+	
+	for (const auto& extension : available_extensions) {
+		required_extensions.erase(extension.extensionName);
+	}
+	
+	return required_extensions.empty();
+}
+
 vector<const char*> Application::GetRequiredExtensions() {
 	vector<const char*> extensions;
 
@@ -179,8 +192,10 @@ void Application::SetupDebugCallback() {
 }
 
 bool Application::is_device_suitable(vk::PhysicalDevice device) {
-	QueueFamilyIndices indices = FindQueueFamilies(device);
-	return indices.is_complete();
+	QueueFamilyIndices indices	= FindQueueFamilies(device);
+	bool extensions_supported	= CheckDeviceExtensionSupport(device);
+	
+	return indices.is_complete() && extensions_supported;
 }
 
 void Application::PickPhysicalDevice() {
@@ -259,7 +274,8 @@ void Application::CreateLogicalDevice() {
 	.setQueueCreateInfoCount(static_cast<uint32_t>(queue_infos.size()))
 	.setPQueueCreateInfos(queue_infos.data())
 	.setPEnabledFeatures(&device_features)
-	.setEnabledExtensionCount(0);
+	.setEnabledExtensionCount(static_cast<uint32_t>(device_extensions.size()));
+	.setPpEnabledExtensionNames(device_extensions.data());
 
 	if (enable_validation_layers) {
 		device_info.setEnabledLayerCount(static_cast<uint32_t>(validation_layers.size()));
