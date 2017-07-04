@@ -4,6 +4,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <set>
+#include <algorithm>
 
 using std::cout;
 using std::cerr;
@@ -57,6 +58,7 @@ void Application::InitializeVulkan() {
 	SetupDebugCallback();
 	PickPhysicalDevice();
 	CreateLogicalDevice();
+	CreateSwapchain();
 }
 
 void Application::MainLoop() {
@@ -179,8 +181,33 @@ void Application::SetupDebugCallback() {
 }
 
 bool Application::is_device_suitable(vk::PhysicalDevice device) {
-	QueueFamilyIndices indices = FindQueueFamilies(device);
-	return indices.is_complete();
+	QueueFamilyIndices indices	= FindQueueFamilies(device);
+	bool extensions_supported	= CheckDeviceExtensions(device)
+
+	bool swapchain_adequate = false;
+	if (extensions_supported) {
+		SwapchainSupportDetails swapchain_support = QuerySwapchainSupport(device);
+		swapchain_adequate =
+			!swapchain_support.formats.empty() &&
+			!swapchain_support.present_modes.empty();
+	}
+
+	return indices.is_complete() && extensions_supported && swapchain_adequate;
+}
+
+bool Application::CheckDeviceExtensions(vk::PhysicalDevice device) {
+	vector<vk::ExtensionProperties> available_extensions;
+	available_extensions = device.enumerateDeviceExtensionProperties();
+
+	set<string> required_extensions(
+		device_extensions.begin(). device_extensions.end()
+	);
+
+	for (const auto& extension : available_extensions) {
+		required_extensions.erase(extension.extensionName);
+	}
+
+	return required_extensions.empty();
 }
 
 void Application::PickPhysicalDevice() {
@@ -236,6 +263,74 @@ QueueFamilyIndices Application::FindQueueFamilies(vk::PhysicalDevice device) {
 	return indices;
 }
 
+SwapchainSupportDetails Application::QuerySwapchainSupport(vk::PhysicalDevice device) {
+	SwapchainSupportDetails details;
+	details.capabilities	= device.getSurfaceCapabilitiesKHR(surface);
+	details.formats			= device.getSurfaceFormatsKHR(surface);
+	details.present_modes	= device.getSurfacePresentModesKHR(surface);
+
+	return details;
+}
+
+vk::SurfaceFormatKHR Application::ChooseSwapchainSurfaceFormat(
+	const vector<vk::SurfaceFormatKHR>& available_formats
+) {
+	if (
+		available_formats.size() == 1 &&
+		available_formats[0].format == vk::Format::eUndefined
+	) {
+		return { vk::Format::eB8G8R8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear }
+	}
+
+	for (const auto& format : available_formats) {
+		if (
+			format.format == vk::Format::eB8G8R8Unorm &&
+			format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear
+		) {
+			return format;
+		}
+	}
+
+	return available_formats[0];
+}
+
+vk::PresentModeKHR Application::ChooseSwapchainPresentMode(
+	const std::vector<vk::PresentModeKHR>& available_modes
+) {
+	// FIFO is guaranteed to be available, but may be buggy
+	vk::PresentModeKHR best_available = vk::PresentModeKHR::eFifo;
+
+	for (const auto& present_mode : available_modes) {
+		if (present_mode == vk::PresentModeKHR::eMailbox) {
+			return present_mode;
+		} else if (present_mode == vk::PresentModeKHR::eImmediate) {
+			best_available = present_mode;
+		}
+	}
+
+	return best_available;
+}
+
+vk::Extent2D Application::ChooseSwapchainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+		return capabilities.currentExtent;
+	}
+
+	vk::Extent2D extent = { window.width(), window.height() };
+
+	// Clamp the values to the max allowed by the surface capabilities
+	extent.width = std::max(
+		capabilities.minImageExtent.width,
+		std::min(capabilities.maxImageExtent.width, extent.width)
+	);
+	extent.height = std::max(
+		capabilities.minImageExtent.height,
+		std::min(capabilities.maxImageExtent.height, extent.height)
+	);
+
+	return extent;
+}
+
 void Application::CreateLogicalDevice() {
 	QueueFamilyIndices indices = FindQueueFamilies(physical_device);
 
@@ -259,7 +354,8 @@ void Application::CreateLogicalDevice() {
 	.setQueueCreateInfoCount(static_cast<uint32_t>(queue_infos.size()))
 	.setPQueueCreateInfos(queue_infos.data())
 	.setPEnabledFeatures(&device_features)
-	.setEnabledExtensionCount(0);
+	.setEnabledExtensionCount(static_cast<uint32_t>(device_extensions.size()))
+	.setPpEnabledExtensionNames(device_extensions.data());
 
 	if (enable_validation_layers) {
 		device_info.setEnabledLayerCount(static_cast<uint32_t>(validation_layers.size()));
@@ -271,4 +367,50 @@ void Application::CreateLogicalDevice() {
 	device			= physical_device.createDevice(device_info);
 	graphics_queue	= device.getQueue(indices.graphics, 0);
 	present_queue	= device.getQueue(indices.present, 0);
+}
+
+void Application::CreateSwapchain() {
+	SwapchainSupportDetails support = QuerySwapchainSupport(physical_device);
+
+	vk::SurfaceFormatKHR format = ChooseSwapchainSurfaceFormat(support.formats);
+	vk::PresentModeKHR present_mode = ChooseSwapchainPresentMode(support.presentModes);
+	vk::Extent2D extent = ChooseSwapchainExtent(support.capabilities);
+
+	// Minimum value + 1 for triple buffering
+	uint32_t image_count = support.capabilities.minImageCount + 1;
+	if (	// A value of zero means no bounds (besides memory requirements)
+		support.capabilities.maxImageCount > 0 &&
+		image_count > support.capabilities.maxImageCount
+	) {		// Clamp to max value
+		image_count = support.capabilities.maxImageCount;
+	}
+
+	auto swapchain_info = vk::SwapchainCreateInfoKHR()
+	.setSurface(surface)
+	.setMinImageCount(image_count)
+	.setImageFormat(format.format)
+	.setImageColorSpace(format.colorSpace)
+	.setImageExtent(extent)
+	.setImageArrayLayers(1)	// always 1 unless it's a stereoscopic 3D application
+	.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment); // Will render directly into the images; if post-processing, this is different
+
+	QueueFamilyIndices indices = FindQueueFamilies(physical_device);
+	uint32_t queue_family_indices[] =
+		{ (uint32_t) indices.graphics, (uint32_t) indices.present };
+
+	if (indices.graphics != indices.present) {
+		swapchain_info.setImageSharingMode(vk::SharingMode::eConcurrent)
+		.setQueueFamilyIndexCount(2)
+		.setPQueueFamilyIndices(queue_family_indices);
+	} else {
+		/*	'Exclusive' means the images can only belong to one queue at a time,
+			and ownership transfer operations must be explicit. This translates
+			to better performance.	*/
+
+		swapchain_info.setImageSharingMode(vk::SharingMode::eExclusive)
+		.setQueueFamilyIndexCount(0)		// Optional
+		.setPQueueFamilyIndices(nullptr);	// Optional
+	}
+
+	
 }

@@ -17,6 +17,12 @@ struct QueueFamilyIndices {
 	bool is_complete();
 };
 
+struct SwapchainSupportDetails {
+	vk::SurfaceCapabilitiesKHR capabilities;
+	std::vector<vk::SurfaceFormatKHR> formats;
+	std::vector<vk::PresentModeKHR> present_modes;
+}
+
 class Application {
 public:
 	Application(
@@ -38,15 +44,15 @@ protected:
 
 	void SetupDebugCallback();
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
-		VkDebugReportFlagsEXT flags,
-		VkDebugReportObjectTypeEXT objType,
-		uint64_t obj,
-		size_t location,
-		int32_t code,
-		const char* layerPrefix,
-		const char* msg,
-		void* userData
+		VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT,
+		uint64_t obj, size_t location, int32_t code,
+		const char* layerPrefix, const char* msg, void* userData
 	);
+
+	const std::vector<const char*> device_extensions = {
+		"VK_KHR_swapchain"
+	};
+	bool CheckDeviceExtensions(vk::PhysicalDevice);
 
 	Window *window;
 
@@ -70,4 +76,11 @@ protected:
 	void PickPhysicalDevice();
 	void CreateLogicalDevice();
 	void CreateSurface();
+
+	// Swapchain
+	SwapchainSupportDetails QuerySwapchainSupport(vk::PhysicalDevice);
+	vk::SurfaceFormatKHR ChooseSwapchainSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>&);
+	vk::PresentModeKHR ChooseSwapchainPresentMode(const std::vector<vk::PresentModeKHR>&);
+	vk::Extent2D ChooseSwapchainExtent(const vk::SurfaceCapabilitiesKHR&);
+	void CreateSwapchain();
 };
