@@ -39,11 +39,13 @@ public:
 protected:
 	static Application* singleton;
 
-	bool enable_validation_layers;
 	const std::vector<const char*> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
 	};
+
+	bool enable_validation_layers;
 	bool CheckValidationLayerSupport();
+	bool CheckDeviceExtensionSupport(vk::PhysicalDevice);
 	std::vector<const char*> GetRequiredExtensions();
 
 	void SetupDebugCallback();

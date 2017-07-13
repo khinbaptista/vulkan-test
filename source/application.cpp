@@ -124,6 +124,19 @@ bool Application::CheckValidationLayerSupport() {
 	return true;
 }
 
+bool Application::CheckDeviceExtensionSupport(vk::PhysicalDevice device) {
+	vector<vk::ExtensionProperties> available_extensions;
+	available_extensions = device.enumerateDeviceExtensionProperties();
+
+	set<string> required_extensions(device_extensions.begin(), device_extensions.end());
+
+	for (const auto& extension : available_extensions) {
+		required_extensions.erase(extension.extensionName);
+	}
+
+	return required_extensions.empty();
+}
+
 vector<const char*> Application::GetRequiredExtensions() {
 	vector<const char*> extensions;
 
