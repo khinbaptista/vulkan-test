@@ -32,7 +32,9 @@ ObjectsPath = source/objects
 ShadersPath = shaders
 
 # Source files names
-SourceFiles = main.cpp window.cpp application.cpp
+SourceFiles = main.cpp \
+	window.cpp swapchain.cpp \
+	application.cpp
 
 # Shader source files (GLSL)
 ShaderFiles = #shader.vert shader.frag

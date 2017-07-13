@@ -9,6 +9,7 @@
 
 #include "vkref.hpp"
 #include "window.hpp"
+#include "swapchain.hpp"
 
 struct QueueFamilyIndices {
 	int graphics	= -1;
@@ -16,12 +17,6 @@ struct QueueFamilyIndices {
 
 	bool is_complete();
 };
-
-struct SwapchainSupportDetails {
-	vk::SurfaceCapabilitiesKHR capabilities;
-	std::vector<vk::SurfaceFormatKHR> formats;
-	std::vector<vk::PresentModeKHR> present_modes;
-}
 
 class Application {
 public:
@@ -34,7 +29,16 @@ public:
 
 	void Run();
 
+	// Singleton access
+	static Application*	get_singleton();
+	vk::Device			get_device();
+	Window*				get_window();
+
+	QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice);
+
 protected:
+	static Application* singleton;
+
 	bool enable_validation_layers;
 	const std::vector<const char*> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -69,7 +73,6 @@ protected:
 	void InitializeVulkan();
 	void MainLoop();
 
-	QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice);
 	bool is_device_suitable(vk::PhysicalDevice);
 
 	void CreateVulkanInstance();
@@ -77,10 +80,5 @@ protected:
 	void CreateLogicalDevice();
 	void CreateSurface();
 
-	// Swapchain
-	SwapchainSupportDetails QuerySwapchainSupport(vk::PhysicalDevice);
-	vk::SurfaceFormatKHR ChooseSwapchainSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>&);
-	vk::PresentModeKHR ChooseSwapchainPresentMode(const std::vector<vk::PresentModeKHR>&);
-	vk::Extent2D ChooseSwapchainExtent(const vk::SurfaceCapabilitiesKHR&);
-	void CreateSwapchain();
+	Swapchain swapchain;
 };
