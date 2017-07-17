@@ -3,15 +3,24 @@
 
 using std::vector;
 
-Swapchain::Swapchain() {}
-
-Swapchain::~Swapchain() {
-	//Application::get_singleton()->get_device().destroySwapchainKHR(vk_swapchain);
+Swapchain::Swapchain(uint32_t width, uint32_t height) {
+	_width = width;
+	_height = height;
 }
 
+Swapchain::~Swapchain() { }
+
 Swapchain::Swapchain(
-	const vk::PhysicalDevice& device, const vk::SurfaceKHR& surface
+	const vk::PhysicalDevice& device, const vk::SurfaceKHR& surface,
+	uint32_t width, uint32_t height
 ) {
+	_width = width;
+	_height = height;
+
+	Create(device, surface);
+}
+
+void Swapchain::Create(const vk::PhysicalDevice& device, const vk::SurfaceKHR& surface) {
 	SwapchainSupportDetails	support			= QuerySupport(device, surface);
 	vk::SurfaceFormatKHR	format			= ChooseSurfaceFormat(support.formats);
 	vk::PresentModeKHR		present_mode	= ChoosePresentMode(support.present_modes);
@@ -114,12 +123,16 @@ vk::PresentModeKHR Swapchain::ChoosePresentMode(
 }
 
 vk::Extent2D Swapchain::ChooseExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
+	vk::Extent2D extent;
+
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-		return capabilities.currentExtent;
+		extent.width  = std::min(capabilities.currentExtent.width, _width);
+		extent.height = std::min(capabilities.currentExtent.height, _height);
+		return extent;
 	}
 
-	Window* window = Application::get_singleton()->get_window();
-	vk::Extent2D extent = { window->width(), window->height() };
+	extent.width  = _width;
+	extent.height = _height;
 
 	// Clamp the values to the max allowed by the surface capabilities
 	extent.width = std::max(
@@ -135,3 +148,8 @@ vk::Extent2D Swapchain::ChooseExtent(const vk::SurfaceCapabilitiesKHR& capabilit
 }
 
 vk::SwapchainKHR Swapchain::vk() { return vk_swapchain; }
+
+uint32_t Swapchain::width()  { return _width;  }
+uint32_t Swapchain::height() { return _height; }
+void Swapchain::width(uint32_t w)  { _width  = w; }
+void Swapchain::height(uint32_t h) { _height = h; }

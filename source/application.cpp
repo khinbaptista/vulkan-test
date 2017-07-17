@@ -67,7 +67,7 @@ void Application::InitializeVulkan() {
 	SetupDebugCallback();
 	PickPhysicalDevice();
 	CreateLogicalDevice();
-	swapchain = Swapchain(physical_device, surface);
+	swapchain = Swapchain(physical_device, surface, window->width(), window->height());
 }
 
 void Application::MainLoop() {
