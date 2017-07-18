@@ -58,7 +58,7 @@ void Swapchain::Create(const vk::PhysicalDevice& device, const vk::SurfaceKHR& s
 			to better performance.	*/
 
 		swapchain_info.setImageSharingMode(vk::SharingMode::eExclusive)
-		.setQueueFamilyIndexCount(0)		// Optisonal
+		.setQueueFamilyIndexCount(0)		// Optional
 		.setPQueueFamilyIndices(nullptr);	// Optional
 	}
 

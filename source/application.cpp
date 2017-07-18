@@ -15,11 +15,12 @@ using std::runtime_error;
 using std::string;
 using std::vector;
 using std::set;
+using std::shared_ptr;
 
 Application* Application::singleton = nullptr;
 
 Application::Application(string title, bool validate) {
-	window = new Window(title);
+	window = std::make_shared<Window>(title);
 	enable_validation_layers = validate;
 	singleton = this;
 }
@@ -43,14 +44,12 @@ Application::~Application() {
 	instance.destroySurfaceKHR(surface);
 	instance.destroy();
 
-	// Destroy window and terminate GLFW
-	delete window;
 	glfwTerminate();
 }
 
-Application*	Application::get_singleton()	{ return singleton; }
-vk::Device		Application::get_device()		{ return device; }
-Window*			Application::get_window()		{ return window; }
+Application*			Application::get_singleton()	{ return singleton; }
+shared_ptr<Window>		Application::get_window()		{ return singleton->window; }
+vk::Device				Application::get_device()		{ return singleton->device; }
 
 void Application::Run() {
 	glfwInit();

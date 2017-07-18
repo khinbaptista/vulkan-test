@@ -30,9 +30,9 @@ public:
 	void Run();
 
 	// Singleton access
-	static Application*	get_singleton();
-	vk::Device			get_device();
-	Window*				get_window();
+	static Application*					get_singleton();
+	static std::shared_ptr<Window>		get_window();
+	static vk::Device					get_device();
 
 	QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice);
 
@@ -60,7 +60,7 @@ protected:
 	};
 	bool CheckDeviceExtensions(vk::PhysicalDevice);
 
-	Window *window;
+	std::shared_ptr<Window> window;
 
 	vk::Instance	instance;
 	vk::SurfaceKHR	surface;
