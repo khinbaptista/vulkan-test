@@ -11,7 +11,9 @@ struct SwapchainSupportDetails {
 
 class Swapchain {
 protected:
-	vk::SwapchainKHR vk_swapchain;
+	vk::SwapchainKHR	_swapchain;
+	vk::Format			_format;
+	vk::Extent2D		_extent;
 
 	vk::SurfaceFormatKHR ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>&);
 	vk::PresentModeKHR ChoosePresentMode(const std::vector<vk::PresentModeKHR>&);
@@ -19,6 +21,8 @@ protected:
 
 	uint32_t _width;
 	uint32_t _height;
+
+	std::vector<vk::Image> _images;
 
 public:
 	~Swapchain();
@@ -35,6 +39,10 @@ public:
 	uint32_t height();
 	void width(uint32_t);
 	void height(uint32_t);
+
+	const std::vector<vk::Image>& images();
+	vk::Format		format();
+	vk::Extent2D	extent();
 
 	void Create(const vk::PhysicalDevice&, const vk::SurfaceKHR&);
 

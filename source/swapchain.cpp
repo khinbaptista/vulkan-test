@@ -26,6 +26,9 @@ void Swapchain::Create(const vk::PhysicalDevice& device, const vk::SurfaceKHR& s
 	vk::PresentModeKHR		present_mode	= ChoosePresentMode(support.present_modes);
 	vk::Extent2D 			extent			= ChooseExtent(support.capabilities);
 
+	_format = format.format;
+	_extent = extent;
+
 	// Minimum value + 1 for triple buffering
 	uint32_t image_count = support.capabilities.minImageCount + 1;
 	if (	// A value of zero means no bounds (besides memory requirements)
@@ -69,7 +72,8 @@ void Swapchain::Create(const vk::PhysicalDevice& device, const vk::SurfaceKHR& s
 	.setClipped(true)
 	.setOldSwapchain(nullptr);
 
-	vk_swapchain = Application::get_singleton()->get_device().createSwapchainKHR(swapchain_info);
+	_swapchain	= Application::get_device().createSwapchainKHR(swapchain_info);
+	_images		= Application::get_device().getSwapchainImagesKHR(_swapchain);
 }
 
 SwapchainSupportDetails Swapchain::QuerySupport(
@@ -147,9 +151,13 @@ vk::Extent2D Swapchain::ChooseExtent(const vk::SurfaceCapabilitiesKHR& capabilit
 	return extent;
 }
 
-vk::SwapchainKHR Swapchain::vk() { return vk_swapchain; }
+vk::SwapchainKHR Swapchain::vk() { return _swapchain; }
 
-uint32_t Swapchain::width()  { return _width;  }
-uint32_t Swapchain::height() { return _height; }
-void Swapchain::width(uint32_t w)  { _width  = w; }
-void Swapchain::height(uint32_t h) { _height = h; }
+uint32_t Swapchain::width()			{ return _width;  }
+uint32_t Swapchain::height()		{ return _height; }
+void Swapchain::width(uint32_t w) 	{ _width  = w; }
+void Swapchain::height(uint32_t h)	{ _height = h; }
+
+const vector<vk::Image>& Swapchain::images()	{ return _images; }
+vk::Format Swapchain::format()		{ return _format; }
+vk::Extent2D Swapchain::extent()	{ return _extent; }
