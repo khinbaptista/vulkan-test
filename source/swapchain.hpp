@@ -35,14 +35,14 @@ public:
 
 	vk::SwapchainKHR vk();
 
-	uint32_t width();
-	uint32_t height();
+	uint32_t width() const;
+	uint32_t height() const;
 	void width(uint32_t);
 	void height(uint32_t);
 
-	const std::vector<vk::Image>& images();
-	vk::Format		format();
-	vk::Extent2D	extent();
+	const std::vector<vk::Image>& images() const;
+	vk::Format		format() const;
+	vk::Extent2D	extent() const;
 
 	void Create(const vk::PhysicalDevice&, const vk::SurfaceKHR&);
 

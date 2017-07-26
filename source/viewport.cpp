@@ -1,6 +1,8 @@
 #include "viewport.hpp"
 #include "application.hpp"
 
+Viewport::~Viewport() { }
+
 Viewport::Viewport() { }
 
 Viewport::Viewport(
@@ -31,26 +33,33 @@ Viewport::Viewport(
 			.setLevelCount(1)
 			.setBaseArrayLayer(0)
 			.setLayerCount(1)
-			/*
+		);
+		/*
 			If we were creating a stereoscopic 3D application, we'd create a
 			swapchain with multiple layers, and create multiple image views
 			for each image representing the views of the left and right eyes
 			by accessing different layers.
-			*/
-		);
+		*/
 
 		_views[i] = Application::get_device().createImageView(view_info);
+		/*
+			An image view is sufficient to be used as a texture, but not to be
+			used as a render target (still needs a framebuffer)
+		*/
 	}
-
-	/*
-	An image view is sufficient to be used as a texture, but not to be used as
-	a render target (still needs a framebuffer)
-	*/
 }
 
-Viewport::~Viewport() {
+void Viewport::destroy_swapchain() {
+	Application::get_device().destroySwapchainKHR(_swapchain.vk());
+}
+
+void Viewport::destroy_image_views() {
 	vk::Device device = Application::get_device();
 	for (size_t i = 0; i < _views.size(); i++) {
 		device.destroyImageView(_views[i]);
 	}
 }
+
+Swapchain& Viewport::swapchain() { return _swapchain; }
+uint32_t Viewport::width() const { return _width; }
+uint32_t Viewport::height() const { return _height; }

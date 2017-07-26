@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vulkan/vulkan.hpp>
 #include "swapchain.hpp"
 
@@ -17,13 +19,14 @@ public:
 		uint32_t width, uint32_t height
 	);
 
-	const Swapchain& swapchain();
-	const std::vector<vk::ImageView>& views();
+	Swapchain& swapchain();
+	const std::vector<vk::ImageView>& views() const;
 
-	uint32_t width();
-	uint32_t height();
+	uint32_t width() const;
+	uint32_t height() const;
 	void width(uint32_t);
 	void height(uint32_t);
 
-
+	void destroy_swapchain();
+	void destroy_image_views();
 };

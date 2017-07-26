@@ -9,7 +9,7 @@
 
 #include "vkref.hpp"
 #include "window.hpp"
-#include "swapchain.hpp"
+#include "viewport.hpp"
 
 struct QueueFamilyIndices {
 	int graphics	= -1;
@@ -82,5 +82,5 @@ protected:
 	void CreateLogicalDevice();
 	void CreateSurface();
 
-	Swapchain swapchain;
+	Viewport viewport;
 };

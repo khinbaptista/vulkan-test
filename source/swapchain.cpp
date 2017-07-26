@@ -45,7 +45,8 @@ void Swapchain::Create(const vk::PhysicalDevice& device, const vk::SurfaceKHR& s
 	.setImageColorSpace(format.colorSpace)
 	.setImageExtent(extent)
 	.setImageArrayLayers(1)	// always 1 unless it's a stereoscopic 3D application
-	.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment); // Will render directly into the images; if post-processing, this is different
+	.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment);
+	// Will render directly into the images; if post-processing, this is different
 
 	QueueFamilyIndices indices = Application::get_singleton()->FindQueueFamilies(device);
 	uint32_t queue_family_indices[] =
@@ -151,13 +152,13 @@ vk::Extent2D Swapchain::ChooseExtent(const vk::SurfaceCapabilitiesKHR& capabilit
 	return extent;
 }
 
-vk::SwapchainKHR Swapchain::vk() { return _swapchain; }
+vk::SwapchainKHR Swapchain::vk()	{ return _swapchain; }
 
-uint32_t Swapchain::width()			{ return _width;  }
-uint32_t Swapchain::height()		{ return _height; }
-void Swapchain::width(uint32_t w) 	{ _width  = w; }
-void Swapchain::height(uint32_t h)	{ _height = h; }
+uint32_t Swapchain::width() const		{ return _width;  }
+uint32_t Swapchain::height() const		{ return _height; }
+void Swapchain::width(uint32_t w) 		{ _width  = w; }
+void Swapchain::height(uint32_t h)		{ _height = h; }
 
-const vector<vk::Image>& Swapchain::images()	{ return _images; }
-vk::Format Swapchain::format()		{ return _format; }
-vk::Extent2D Swapchain::extent()	{ return _extent; }
+const vector<vk::Image>& Swapchain::images() const { return _images; }
+vk::Format Swapchain::format() const	{ return _format; }
+vk::Extent2D Swapchain::extent() const	{ return _extent; }

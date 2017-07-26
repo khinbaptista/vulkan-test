@@ -26,7 +26,7 @@ Application::Application(string title, bool validate) {
 }
 
 Application::~Application() {
-	device.destroySwapchainKHR(swapchain.vk());
+	viewport.destroy_swapchain();
 
 	{	// Delete debug report callback object
 		auto destroy_callback_func = (PFN_vkDestroyDebugReportCallbackEXT)
@@ -36,6 +36,8 @@ Application::~Application() {
 			destroy_callback_func(instance, callback, nullptr);
 		}
 	}
+
+	viewport.destroy_image_views();
 
 	// Destroy logical device
 	device.destroy();
@@ -66,7 +68,7 @@ void Application::InitializeVulkan() {
 	SetupDebugCallback();
 	PickPhysicalDevice();
 	CreateLogicalDevice();
-	swapchain = Swapchain(physical_device, surface, window->width(), window->height());
+	viewport = Viewport(physical_device, surface, window->width(), window->height());
 }
 
 void Application::MainLoop() {
