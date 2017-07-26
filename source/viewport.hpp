@@ -10,6 +10,7 @@ protected:
 	uint32_t _height;
 
 public:
+	~Viewport();
 	Viewport();
 	Viewport(
 		const vk::PhysicalDevice&, const vk::SurfaceKHR&,

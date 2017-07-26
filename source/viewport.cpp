@@ -9,16 +9,16 @@ Viewport::Viewport(
 )
 :	_width(width)
 ,	_height(height)
-,	swapchain(device, surface, width, height)
+,	_swapchain(device, surface, width, height)
 {
-	size_t image_count = swapchain.images().size();
+	size_t image_count = _swapchain.images().size();
 	_views.resize(image_count);
 
 	for (size_t i = 0; i < image_count; i++) {
 		auto view_info = vk::ImageViewCreateInfo()
-		.setImage(swapchain.images()[i])
+		.setImage(_swapchain.images()[i])
 		.setViewType(vk::ImageViewType::e2D)
-		.setFormat(swapchain.format())
+		.setFormat(_swapchain.format())
 		.setComponents({
 			vk::ComponentSwizzle::eIdentity,
 			vk::ComponentSwizzle::eIdentity,
@@ -30,7 +30,7 @@ Viewport::Viewport(
 			.setBaseMipLevel(0)
 			.setLevelCount(1)
 			.setBaseArrayLayer(0)
-			.setLayerCount(1);
+			.setLayerCount(1)
 			/*
 			If we were creating a stereoscopic 3D application, we'd create a
 			swapchain with multiple layers, and create multiple image views
@@ -51,6 +51,6 @@ Viewport::Viewport(
 Viewport::~Viewport() {
 	vk::Device device = Application::get_device();
 	for (size_t i = 0; i < _views.size(); i++) {
-		device.destroyImageView(_view[i]);
+		device.destroyImageView(_views[i]);
 	}
 }
