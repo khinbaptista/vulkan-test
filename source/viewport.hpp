@@ -27,6 +27,6 @@ public:
 	void width(uint32_t);
 	void height(uint32_t);
 
-	void destroy_swapchain();
-	void destroy_image_views();
+	void DestroySwapchain();
+	void DestroyImageViews();
 };

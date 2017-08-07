@@ -49,11 +49,11 @@ Viewport::Viewport(
 	}
 }
 
-void Viewport::destroy_swapchain() {
+void Viewport::DestroySwapchain() {
 	Application::get_device().destroySwapchainKHR(_swapchain.vk());
 }
 
-void Viewport::destroy_image_views() {
+void Viewport::DestroyImageViews() {
 	vk::Device device = Application::get_device();
 	for (size_t i = 0; i < _views.size(); i++) {
 		device.destroyImageView(_views[i]);

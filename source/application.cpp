@@ -26,7 +26,7 @@ Application::Application(string title, bool validate) {
 }
 
 Application::~Application() {
-	viewport.destroy_swapchain();
+	viewport.DestroySwapchain();
 
 	{	// Delete debug report callback object
 		auto destroy_callback_func = (PFN_vkDestroyDebugReportCallbackEXT)
@@ -37,7 +37,7 @@ Application::~Application() {
 		}
 	}
 
-	viewport.destroy_image_views();
+	viewport.DestroyImageViews();
 
 	// Destroy logical device
 	device.destroy();
@@ -69,6 +69,7 @@ void Application::InitializeVulkan() {
 	PickPhysicalDevice();
 	CreateLogicalDevice();
 	viewport = Viewport(physical_device, surface, window->width(), window->height());
+	CreateGraphicsPipeline();
 }
 
 void Application::MainLoop() {
@@ -322,4 +323,26 @@ void Application::CreateLogicalDevice() {
 	device			= physical_device.createDevice(device_info);
 	graphics_queue	= device.getQueue(indices.graphics, 0);
 	present_queue	= device.getQueue(indices.present, 0);
+}
+
+void Application::CreateGraphicsPipeline() {
+	vertex_shader.LoadSourceFile("shaders/shader-v.spv");
+	fragment_shader.LoadSourceFile("shaders/shader-f.spv");
+
+	auto vertex_stage_info = vk::PipelineShaderStageCreateInfo()
+	.setStage(vk::ShaderStageFlagBits::eVertex)
+	.setModule(vertex_shader.module())
+	.setPName("main");
+
+	auto fragment_stage_info = vk::PipelineShaderStageCreateInfo()
+	.setStage(vk::ShaderStageFlagBits::eFragment)
+	.setModule(fragment_shader.module())
+	.setPName("main");
+
+	vk::PipelineShaderStageCreateInfo shader_stages[] = {
+		vertex_stage_info, fragment_stage_info
+	};
+
+	vertex_shader.DestroyModule();
+	fragment_shader.DestroyModule();
 }
