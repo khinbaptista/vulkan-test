@@ -3,6 +3,9 @@
 #include <string>
 #include <vector>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.hpp>
@@ -86,6 +89,8 @@ protected:
 	Viewport viewport;
 	Shader vertex_shader;
 	Shader fragment_shader;
+
+	vk::PipelineLayout pipeline_layout;
 
 	void CreateGraphicsPipeline();
 };

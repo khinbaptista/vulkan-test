@@ -26,6 +26,7 @@ Application::Application(string title, bool validate) {
 }
 
 Application::~Application() {
+	device.destroyPipelineLayout(pipeline_layout);
 	viewport.DestroySwapchain();
 
 	{	// Delete debug report callback object
@@ -342,6 +343,74 @@ void Application::CreateGraphicsPipeline() {
 	vk::PipelineShaderStageCreateInfo shader_stages[] = {
 		vertex_stage_info, fragment_stage_info
 	};
+
+	auto vertex_input_info = vk::PipelineVertexInputStateCreateInfo()
+	.setVertexBindingDescriptionCount(0)	// shaders have hard-coded vertex info for now
+	.setPVertexBindingDescriptions(nullptr)
+	.setVertexAttributeDescriptionCount(0)
+	.setPVertexAttributeDescriptions(nullptr);
+
+	// Material?
+	auto input_assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
+	.setTopology(vk::PrimitiveTopology::eTriangleList)
+	.setPrimitiveRestartEnable(false)
+
+	auto viewport_state_info = vk::PipelineViewportStateCreateInfo()
+	.setViewportCount(1)
+	.setPViewports(&viewport.vk())
+	.setScissorCount(1)
+	.setPScissors(&viewport.scissor);
+
+	auto rasterizer_info = vk::PipelineRasterizationStateCreateInfo()
+	.setDepthClampEnable(false) 		// useful for shadow maps
+	.setRasterizerDiscardEnable(false)	// disables output to the framebuffer
+	.setPolygonMode(vk::PolygonMode::eFill)	// other modes require GPU features
+	.setLineWidth(1.0f)
+	.setCullMode(vk::CullModeFlagBits::eBack)
+	.setFrontFace(vk::FrontFace::eClockwise)
+	.setDepthBiasEnable(false)			// useful for shadow maps, maybe
+	.setDepthBiasConstantFactor(0.0f)
+	.setDepthBiasClamp(0.0f)
+	.setDepthBiasSlopeFactor(0.0f);
+
+	auto multisampling_info = vk::PipelineMultisampleStateCreateInfo()
+	.setSampleShadingEnable(false)
+	.setRasterizationSamples(vk::SampleCountFlagBits::e1)
+	.setMinSampleShading(1.0f)
+	.setPSampleMask(nullptr)
+	.setAlphaToCoverageEnable(false)
+	.setAlphaToOneEnable(false);
+
+	// Depth buffer?
+	// ...
+
+	auto color_blend_attachment = vk::PipelineColorBlendAttachmentState()
+	.setColorWriteMask(
+		vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+		vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
+	)
+	.setBlendEnable(false)
+	.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)		// Alpha blending
+	.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+	.setColorBlendOp(vk::BlendOp::eAdd)
+	.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
+	.setDstAlphaBlendFactor(vk::BlendFactor::eZero)
+	.setAlphaBlendOp(vk::BlendOp::eAdd);
+
+	auto color_blending_info = vk::PipelineColorBlendStateCreateInfo()
+	.setLogicOpEnable(false)
+	.setLogicOp(vk::LogicOp::eCopy)
+	.setAttachmentCount(1)
+	.setPAttachments(&color_blend_attachment)
+	.setBlendConstants({ 0.0f, 0.0f, 0.0f, 0.0f });
+
+	// Pass uniforms and push constants to shaders
+	auto pipeline_layout_info = vk::PipelineLayoutCreateInfo()
+	.setSetLayoutCount(0)
+	.setPSetLayouts(nullptr)
+	.setPushConstantRangeCount(0)
+	.setPPushConstantRanges(nullptr);
+	pipeline_layout = device.createPipelineLayout(pipeline_layout_info);
 
 	vertex_shader.DestroyModule();
 	fragment_shader.DestroyModule();

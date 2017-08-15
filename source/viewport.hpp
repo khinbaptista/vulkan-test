@@ -11,6 +11,8 @@ protected:
 	uint32_t _width;
 	uint32_t _height;
 
+	vk::Viewport _viewport;
+
 public:
 	~Viewport();
 	Viewport();
@@ -19,8 +21,12 @@ public:
 		uint32_t width, uint32_t height
 	);
 
+	vk::Rect2D scissor;
+
 	Swapchain& swapchain();
 	const std::vector<vk::ImageView>& views() const;
+
+	vk::Viewport& vk();
 
 	uint32_t width() const;
 	uint32_t height() const;

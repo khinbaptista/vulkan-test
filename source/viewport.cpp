@@ -47,7 +47,19 @@ Viewport::Viewport(
 			used as a render target (still needs a framebuffer)
 		*/
 	}
+
+	_viewport.x = 0.0f;
+	_viewport.y = 0.0f;
+	_viewport.width  = (float)_swapchain.extent().width;
+	_viewport.height = (float)_swapchain.extent().height;
+	_viewport.minDepth = 0.0f;
+	_viewport.maxDepth = 1.0f;
+
+	scissor.offset = { 0, 0 };
+	scissor.extent = _swapchain.extent();
 }
+
+vk::Viewport& vk() { return _viewport; }
 
 void Viewport::DestroySwapchain() {
 	Application::get_device().destroySwapchainKHR(_swapchain.vk());
