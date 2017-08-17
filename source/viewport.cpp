@@ -55,11 +55,11 @@ Viewport::Viewport(
 	_viewport.minDepth = 0.0f;
 	_viewport.maxDepth = 1.0f;
 
-	scissor.offset = { 0, 0 };
+	scissor.offset = vk::Offset2D(0, 0);
 	scissor.extent = _swapchain.extent();
 }
 
-vk::Viewport& vk() { return _viewport; }
+vk::Viewport& Viewport::vk() { return _viewport; }
 
 void Viewport::DestroySwapchain() {
 	Application::get_device().destroySwapchainKHR(_swapchain.vk());

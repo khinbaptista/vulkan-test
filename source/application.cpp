@@ -27,6 +27,8 @@ Application::Application(string title, bool validate) {
 
 Application::~Application() {
 	device.destroyPipelineLayout(pipeline_layout);
+	device.destroyRenderPass(render_pass);
+
 	viewport.DestroySwapchain();
 
 	{	// Delete debug report callback object
@@ -70,6 +72,7 @@ void Application::InitializeVulkan() {
 	PickPhysicalDevice();
 	CreateLogicalDevice();
 	viewport = Viewport(physical_device, surface, window->width(), window->height());
+	CreateRenderPass();
 	CreateGraphicsPipeline();
 }
 
@@ -326,6 +329,42 @@ void Application::CreateLogicalDevice() {
 	present_queue	= device.getQueue(indices.present, 0);
 }
 
+void Application::CreateRenderPass() {
+	// How many color and depth buffers will there be?
+	// How many samples to use for each of them and how should
+	// their contents be handled throughout the rendering operations?
+
+	auto color_attachment = vk::AttachmentDescription()
+	.setFormat(viewport.swapchain().format())
+	.setSamples(vk::SampleCountFlagBits::e1)
+	.setLoadOp(vk::AttachmentLoadOp::eClear)
+	.setStoreOp(vk::AttachmentStoreOp::eStore)
+	.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+	.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)	// not using stencil
+	.setInitialLayout(vk::ImageLayout::eUndefined)
+	.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+
+	auto color_attachment_ref = vk::AttachmentReference()
+	.setAttachment(0)	// index of our (single) color attachment
+	.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+	auto subpass = vk::SubpassDescription()
+	.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+	.setColorAttachmentCount(1)
+	.setPColorAttachments(&color_attachment_ref);
+	// the index of the attachment in this array is directly
+	// referenced from the fragment shader with the
+	// `layout(location = 0) out vec4 out_color` directive
+
+	auto render_pass_info = vk::RenderPassCreateInfo()
+	.setAttachmentCount(1)
+	.setPAttachments(&color_attachment)
+	.setSubpassCount(1)
+	.setPSubpasses(&subpass);
+
+	render_pass = device.createRenderPass(render_pass_info);
+}
+
 void Application::CreateGraphicsPipeline() {
 	vertex_shader.LoadSourceFile("shaders/shader-v.spv");
 	fragment_shader.LoadSourceFile("shaders/shader-f.spv");
@@ -353,7 +392,7 @@ void Application::CreateGraphicsPipeline() {
 	// Material?
 	auto input_assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
 	.setTopology(vk::PrimitiveTopology::eTriangleList)
-	.setPrimitiveRestartEnable(false)
+	.setPrimitiveRestartEnable(false);
 
 	auto viewport_state_info = vk::PipelineViewportStateCreateInfo()
 	.setViewportCount(1)
@@ -410,6 +449,7 @@ void Application::CreateGraphicsPipeline() {
 	.setPSetLayouts(nullptr)
 	.setPushConstantRangeCount(0)
 	.setPPushConstantRanges(nullptr);
+
 	pipeline_layout = device.createPipelineLayout(pipeline_layout_info);
 
 	vertex_shader.DestroyModule();

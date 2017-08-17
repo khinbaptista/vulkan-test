@@ -90,7 +90,9 @@ protected:
 	Shader vertex_shader;
 	Shader fragment_shader;
 
-	vk::PipelineLayout pipeline_layout;
+	vk::RenderPass		render_pass;
+	vk::PipelineLayout	pipeline_layout;
 
+	void CreateRenderPass();
 	void CreateGraphicsPipeline();
 };
