@@ -92,6 +92,7 @@ protected:
 
 	vk::RenderPass		render_pass;
 	vk::PipelineLayout	pipeline_layout;
+	vk::Pipeline		graphics_pipeline;
 
 	void CreateRenderPass();
 	void CreateGraphicsPipeline();

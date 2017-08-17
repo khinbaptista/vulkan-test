@@ -26,6 +26,7 @@ Application::Application(string title, bool validate) {
 }
 
 Application::~Application() {
+	device.destroyPipeline(graphics_pipeline);
 	device.destroyPipelineLayout(pipeline_layout);
 	device.destroyRenderPass(render_pass);
 
@@ -361,7 +362,6 @@ void Application::CreateRenderPass() {
 	.setPAttachments(&color_attachment)
 	.setSubpassCount(1)
 	.setPSubpasses(&subpass);
-
 	render_pass = device.createRenderPass(render_pass_info);
 }
 
@@ -449,8 +449,25 @@ void Application::CreateGraphicsPipeline() {
 	.setPSetLayouts(nullptr)
 	.setPushConstantRangeCount(0)
 	.setPPushConstantRanges(nullptr);
-
 	pipeline_layout = device.createPipelineLayout(pipeline_layout_info);
+
+	auto pipeline_info = vk::GraphicsPipelineCreateInfo()
+	.setStageCount(2)
+	.setPStages(shader_stages)
+	.setPVertexInputState(&vertex_input_info)
+	.setPInputAssemblyState(&input_assembly_info)
+	.setPViewportState(&viewport_state_info)
+	.setPRasterizationState(&rasterizer_info)
+	.setPMultisampleState(&multisampling_info)
+	.setPDepthStencilState(nullptr)
+	.setPColorBlendState(&color_blending_info)
+	.setPDynamicState(nullptr)
+	.setLayout(pipeline_layout)
+	.setRenderPass(render_pass)
+	.setSubpass(0)
+	.setBasePipelineHandle(nullptr)
+	.setBasePipelineIndex(-1);
+	graphics_pipeline = device.createGraphicsPipeline(nullptr, pipeline_info);
 
 	vertex_shader.DestroyModule();
 	fragment_shader.DestroyModule();
