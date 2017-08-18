@@ -33,7 +33,7 @@ ShadersPath = shaders
 
 # Source files names
 SourceFiles = main.cpp \
-	window.cpp swapchain.cpp viewport.cpp shader.cpp \
+	window.cpp swapchain.cpp viewport.cpp shader.cpp material.cpp \
 	application.cpp
 
 # Shader source files (GLSL)

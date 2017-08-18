@@ -9,6 +9,12 @@ using std::string;
 
 Shader::Shader() {}
 
+Shader::~Shader() {
+	if (Application::get_singleton()) {
+		DestroyModule();
+	}
+}
+
 Shader::Shader(const string& filename) {
 	LoadSourceFile(filename);
 }
@@ -23,14 +29,12 @@ void Shader::CreateModule(const vector<byte> &code) {
 	.setCodeSize(code.size())
 	.setPCode(reinterpret_cast<const uint32_t*>(code.data()));
 
-	_module = Application::get_device().createShaderModule(module_info);
+	module = Application::get_device().createShaderModule(module_info);
 }
 
 void Shader::DestroyModule() {
-	Application::get_device().destroyShaderModule(_module);
+	Application::get_device().destroyShaderModule(module);
 }
-
-vk::ShaderModule Shader::module() { return _module; }
 
 vector<byte> ReadFile(const string& filename) {
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);

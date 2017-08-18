@@ -13,7 +13,7 @@
 #include "vkref.hpp"
 #include "window.hpp"
 #include "viewport.hpp"
-#include "shader.hpp"
+#include "material.hpp"
 
 struct QueueFamilyIndices {
 	int graphics	= -1;
@@ -87,13 +87,11 @@ protected:
 	void CreateSurface();
 
 	Viewport viewport;
-	Shader vertex_shader;
-	Shader fragment_shader;
-
-	vk::RenderPass		render_pass;
-	vk::PipelineLayout	pipeline_layout;
-	vk::Pipeline		graphics_pipeline;
+	Material material;
 
 	void CreateRenderPass();
 	void CreateGraphicsPipeline();
+
+	std::vector<vk::Framebuffer> framebuffers;	// swapchain_framebuffers;
+	void CreateFramebuffers();
 };
