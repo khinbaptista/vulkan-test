@@ -4,12 +4,11 @@
 #include "viewport.hpp"
 
 class Material {
-protected:
+public:
 	vk::RenderPass		render_pass;
 	vk::PipelineLayout	pipeline_layout;
 	vk::Pipeline		graphics_pipeline;
 
-public:
 	vk::Format color_attachment_format;
 	vk::PrimitiveTopology topology;
 

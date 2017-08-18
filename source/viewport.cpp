@@ -61,6 +61,28 @@ Viewport::Viewport(
 
 vk::Viewport& Viewport::vk() { return _viewport; }
 
+void Viewport::CreateFramebuffers(vk::RenderPass renderpass) {
+	auto device = Application::get_device();
+
+	framebuffers.resize(_views.size());
+
+	for (size_t i = 0; i < _views.size(); i++) {
+		vk::ImageView attachments[] = {
+			_views[i]
+		};
+
+		auto framebuffer_info = vk::FramebufferCreateInfo()
+		.setRenderPass(renderpass)
+		.setAttachmentCount(1)
+		.setPAttachments(attachments)
+		.setWidth(_width)
+		.setHeight(_height)
+		.setLayers(1);
+
+		framebuffers[i] = device.createFramebuffer(framebuffer_info);
+	}
+}
+
 void Viewport::DestroySwapchain() {
 	Application::get_device().destroySwapchainKHR(_swapchain.vk());
 }
@@ -69,6 +91,13 @@ void Viewport::DestroyImageViews() {
 	vk::Device device = Application::get_device();
 	for (size_t i = 0; i < _views.size(); i++) {
 		device.destroyImageView(_views[i]);
+	}
+}
+
+void Viewport::DestroyFramebuffers() {
+	auto device = Application::get_device();
+	for (size_t i = 0; i < framebuffers.size(); i++) {
+		device.destroyFramebuffer(framebuffers[i]);
 	}
 }
 

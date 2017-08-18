@@ -92,6 +92,6 @@ protected:
 	void CreateRenderPass();
 	void CreateGraphicsPipeline();
 
-	std::vector<vk::Framebuffer> framebuffers;	// swapchain_framebuffers;
-	void CreateFramebuffers();
+	//std::vector<vk::Framebuffer> framebuffers;	// swapchain_framebuffers;
+	//void CreateFramebuffers();
 };

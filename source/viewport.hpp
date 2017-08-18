@@ -33,6 +33,10 @@ public:
 	void width(uint32_t);
 	void height(uint32_t);
 
+	std::vector<vk::Framebuffer> framebuffers;
+	void CreateFramebuffers(vk::RenderPass);
+
 	void DestroySwapchain();
 	void DestroyImageViews();
+	void DestroyFramebuffers();
 };

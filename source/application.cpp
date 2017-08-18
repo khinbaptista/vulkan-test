@@ -26,6 +26,7 @@ Application::Application(string title, bool validate) {
 }
 
 Application::~Application() {
+	viewport.DestroyFramebuffers();
 	material.Dispose(device);
 	viewport.DestroySwapchain();
 
@@ -75,7 +76,7 @@ void Application::InitializeVulkan() {
 	material.CreateRenderpass();
 	material.CreateGraphicsPipeline(viewport);
 
-	CreateFramebuffers();
+	viewport.CreateFramebuffers(material.render_pass);
 }
 
 void Application::MainLoop() {
@@ -329,8 +330,4 @@ void Application::CreateLogicalDevice() {
 	device			= physical_device.createDevice(device_info);
 	graphics_queue	= device.getQueue(indices.graphics, 0);
 	present_queue	= device.getQueue(indices.present, 0);
-}
-
-void Application::CreateFramebuffers() {
-
 }
