@@ -49,7 +49,6 @@ protected:
 
 	bool enable_validation_layers;
 	bool CheckValidationLayerSupport();
-	bool CheckDeviceExtensionSupport(vk::PhysicalDevice);
 	std::vector<const char*> GetRequiredExtensions();
 
 	void SetupDebugCallback();

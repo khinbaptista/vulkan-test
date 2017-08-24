@@ -117,6 +117,11 @@ bool Application::CheckValidationLayerSupport() {
 	vector<vk::LayerProperties> available_layers;
 	available_layers = vk::enumerateInstanceLayerProperties();
 
+	cout << "Available validation layers:" << endl;
+	for (const char* layer_name : validation_layers) {
+		cout << "\t" << layer_name << endl;
+	}
+
 	for (const char* layer_name : validation_layers) {
 		bool layer_found = false;
 
@@ -131,19 +136,6 @@ bool Application::CheckValidationLayerSupport() {
 	}
 
 	return true;
-}
-
-bool Application::CheckDeviceExtensionSupport(vk::PhysicalDevice device) {
-	vector<vk::ExtensionProperties> available_extensions;
-	available_extensions = device.enumerateDeviceExtensionProperties();
-
-	set<string> required_extensions(device_extensions.begin(), device_extensions.end());
-
-	for (const auto& extension : available_extensions) {
-		required_extensions.erase(extension.extensionName);
-	}
-
-	return required_extensions.empty();
 }
 
 vector<const char*> Application::GetRequiredExtensions() {
@@ -234,6 +226,11 @@ bool Application::CheckDeviceExtensions(vk::PhysicalDevice device) {
 		device_extensions.begin(), device_extensions.end()
 	);
 
+	cout << "Available device extensions:" << endl;
+	for (const auto& extension : available_extensions) {
+		cout << "\t" << extension.extensionName << endl;
+	}
+
 	for (const auto& extension : available_extensions) {
 		required_extensions.erase(extension.extensionName);
 	}
@@ -247,6 +244,13 @@ void Application::PickPhysicalDevice() {
 
 	if (devices.size() == 0) {
 		throw runtime_error("Filed to find GPUs with Vulkan support");
+	}
+
+	cout << "Available physical devices:" << endl;
+	for (const auto& device : devices) {
+		auto properties = device.getProperties();
+		cout << "\t" << properties.deviceName << "\t\t" <<
+			vk::to_string(properties.deviceType) << endl;
 	}
 
 	for (const auto& device : devices) {
